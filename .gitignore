@@ -1,0 +1,60 @@
+# =========================
+# PHP / Composer / Project
+# =========================
+vendor/
+composer.lock
+composer.phar
+
+# Thư mục cache, logs, uploads tạm
+cache/
+logs/
+tmp/
+uploads/
+
+# =========================
+# Environment & Config
+# =========================
+.env
+.env.local
+.env.*.local
+includes/config.php.bak
+
+# =========================
+# System Files
+# =========================
+.DS_Store
+Thumbs.db
+*.bak
+*.swp
+*.swo
+*.log
+
+# =========================
+# Docker
+# =========================
+/db_data/
+/vendor/
+/node_modules/
+docker-compose.override.yml
+*.pid
+
+# =========================
+# IDE / Editor files
+# =========================
+.vscode/
+.idea/
+*.iml
+
+# =========================
+# OS-specific
+# =========================
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# =========================
+# Node / Frontend (nếu có)
+# =========================
+node_modules/
+dist/
+build/

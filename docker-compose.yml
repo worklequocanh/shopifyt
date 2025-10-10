@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  # PHP + Apache
+  web:
+    build: .
+    container_name: php-apache
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - db
+    environment:
+      # Cho PHP dùng thông tin DB từ .env
+      DB_HOST: db
+      DB_NAME: ecommerce
+      DB_USER: root
+      DB_PASS: root
+
+  # MySQL
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ecommerce
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # phpMyAdmin (tùy chọn, để quản lý DB)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - db
+
+volumes:
+  db_data:
