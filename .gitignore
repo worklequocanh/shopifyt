@@ -35,9 +35,7 @@ Thumbs.db
 /db_data/
 /vendor/
 /node_modules/
-Dockerfile
 docker-compose.override.yml
-docker-compose.yml
 *.pid
 
 # =========================
