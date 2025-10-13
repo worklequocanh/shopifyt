@@ -7,12 +7,13 @@ if (!file_exists($envPath)) {
 }
 
 // Chuyển nội dung .env thành mảng
-$env = parse_ini_file($envPath);
+// $env = parse_ini_file($envPath);
+$env = parse_ini_file($envPath, false, INI_SCANNER_RAW);
 
-$host    = $env['DB_HOST']     ?? 'db';
-$dbname  = $env['DB_NAME']     ?? 'ecommerce';
+$host    = $env['DB_HOST']     ?? 'localhost';
+$dbname  = $env['DB_NAME']     ?? 'db';
 $user    = $env['DB_USER']     ?? 'root';
-$pass    = $env['DB_PASS']     ?? 'example';
+$pass    = $env['DB_PASS']     ?? '';
 $charset = $env['DB_CHARSET']  ?? 'utf8mb4';
 
 // Chuỗi DSN (Data Source Name) cho PDO
@@ -31,4 +32,3 @@ try {
 } catch (PDOException $e) {
     die("❌ Lỗi kết nối Database: " . $e->getMessage());
 }
-?>
