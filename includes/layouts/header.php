@@ -1,181 +1,97 @@
-<?php
-// Lấy thông tin giỏ hàng
-$cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
+<?php $logined = isLoggedIn(); ?>
+<?php include __DIR__ . '/flash-message.php'; ?>
 
-// Lấy danh sách categories cho dropdown
-try {
-    $categories_stmt = $pdo->query("SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category");
-    $categories = $categories_stmt->fetchAll(PDO::FETCH_COLUMN);
-} catch (Exception $e) {
-    $categories = [];
-}
-?>
-<!DOCTYPE html>
-<html lang="vi">
+<header x-data="{ mobileMenuOpen: false, userMenuOpen: false }"
+  class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+  <nav class="container mx-auto px-4 lg:px-6 py-3">
+    <div class="flex justify-between items-center">
+      <a href="index.php" class="text-2xl font-bold text-gray-900">STYLEX</a>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($page_title) ? $page_title . ' - ' : ''; ?>ShopifyT</title>
+      <ul class="hidden lg:flex items-center space-x-8 font-medium">
+        <li><a href="index.php"
+            class="<?php $page_title === 'Trang chủ' ? 'text-gray-900' : 'text-gray-600' ?> hover:text-blue-600 transition-colors">Trang
+            chủ</a></li>
+        <li><a href="products.php"
+            class="<?php $page_title === 'Sản phẩm' ? 'text-gray-900' : 'text-gray-600' ?> hover:text-blue-600 transition-colors">Sản
+            phẩm</a></li>
+        <li><a href="#"
+            class="<?php $page_title === 'Về chúng tôi' ? 'text-gray-900' : 'text-gray-600' ?> hover:text-blue-600 transition-colors">Về
+            chúng tôi</a></li>
+      </ul>
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      <div class="flex items-center space-x-4">
+        <!-- <a href="#" class="text-gray-500 hover:text-gray-900 hidden sm:block">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </a> -->
+        <a href="shopping-cart.php" class="text-gray-500 hover:text-gray-900 relative">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </a>
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
-
-<body>
-    <!-- Header -->
-    <header class="header">
-        <!-- Top Bar -->
-        <div class="header-top">
-            <div class="container">
-                <div class="d-flex justify-between align-center">
-                    <div class="d-flex" style="gap: 2rem;">
-                        <span><i class="fas fa-phone"></i> Hotline: 1900-xxxx</span>
-                        <span><i class="fas fa-envelope"></i> support@shopifyt.com</span>
-                    </div>
-                    <div class="d-flex" style="gap: 1rem;">
-                        <a href="#" class="text-white"><i class="fab fa-facebook"></i></a>
-                        <a href="#" class="text-white"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="text-white"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-white"><i class="fab fa-youtube"></i></a>
-                    </div>
-                </div>
-            </div>
+        <?php if ($logined): ?>
+        <div class="relative hidden lg:block">
+          <button @click="userMenuOpen = !userMenuOpen" class="text-gray-500 hover:text-gray-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </button>
+          <div x-show="userMenuOpen" @click.away="userMenuOpen = false" x-transition
+            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50">
+            <div class="px-4 py-2 text-sm text-gray-700">Chào, <span
+                class="font-medium"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Bạn'); ?></span></div>
+            <a href="account-info.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Tài khoản của
+              tôi</a>
+            <a href="logout.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Đăng xuất</a>
+          </div>
         </div>
-
-        <!-- Main Header -->
-        <div class="header-main">
-            <div class="container">
-                <div class="d-flex justify-between align-center">
-                    <!-- Logo -->
-                    <a href="index.php" class="logo">
-                        <!-- <img src="assets/img/logo.png" alt="ShopifyT"> -->
-                        <span>ShopifyT</span>
-                    </a>
-
-                    <!-- Search Bar -->
-                    <div class="search-bar">
-                        <form method="GET" action="products.php" style="display: flex; width: 100%;">
-                            <input type="text" name="search" class="search-input" placeholder="Tìm kiếm sản phẩm..." value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
-                            <button type="submit" class="search-btn">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- User Actions -->
-                    <div class="header-actions">
-                        <a href="login.php" class="header-action">
-                            <i class="fas fa-user"></i>
-                            <span>Đăng nhập</span>
-                        </a>
-                        <a href="register.php" class="header-action">
-                            <i class="fas fa-user-plus"></i>
-                            <span>Đăng ký</span>
-                        </a>
-                        <a href="shopping-cart.php" class="header-action cart-badge <?php echo basename($_SERVER['PHP_SELF']) == 'shopping-cart.php' ? 'active' : ''; ?>">
-                            <i class="fas fa-shopping-cart"></i>
-                            <span>Giỏ hàng</span>
-                            <span class="cart-count"><?php echo $cart_count; ?></span>
-                        </a>
-                    </div>
-                </div>
-            </div>
+        <?php else: ?>
+        <div class="hidden lg:flex items-center space-x-2">
+          <a href="login.php"
+            class="bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">Đăng
+            nhập</a>
+          <a href="register.php"
+            class="bg-gray-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm">Đăng
+            ký</a>
         </div>
+        <?php endif; ?>
 
-        <!-- Navigation -->
-        <div class="header-bottom">
-            <div class="container">
-                <nav class="nav-menu">
-                    <div class="nav-links">
-                        <a href="index.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
-                            <i class="fas fa-home"></i>
-                            <span>Trang chủ</span>
-                        </a>
-                        <a href="products.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'products.php' ? 'active' : ''; ?>">
-                            <i class="fas fa-th-large"></i>
-                            <span>Sản phẩm</span>
-                        </a>
-                        <div class="nav-dropdown">
-                            <a href="#" class="nav-link">
-                                <i class="fas fa-list"></i>
-                                <span>Danh mục</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </a>
-                            <div class="nav-dropdown-menu">
-                                <?php foreach ($categories as $category): ?>
-                                    <a href="products.php?category=<?php echo urlencode($category); ?>" class="nav-dropdown-link">
-                                        <?php echo htmlspecialchars($category); ?>
-                                    </a>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-percent"></i>
-                            <span>Khuyến mãi</span>
-                        </a>
-                        <a href="#" class="nav-link">
-                            <i class="fas fa-info-circle"></i>
-                            <span>Liên hệ</span>
-                        </a>
-                    </div>
-                    <div class="d-flex align-center" style="gap: 1rem;">
-                        <span style="font-size: 0.875rem;">
-                            <i class="fas fa-truck"></i>
-                            Miễn phí vận chuyển đơn từ 500k
-                        </span>
-                    </div>
-                </nav>
-            </div>
-        </div>
-    </header>
+        <button @click="mobileMenuOpen = !mobileMenuOpen" class="lg:hidden text-gray-500 hover:text-gray-900">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+          </svg>
+        </button>
+      </div>
+    </div>
 
-    <!-- Breadcrumb (optional) -->
-    <?php if (isset($breadcrumbs) && !empty($breadcrumbs)): ?>
-        <div class="breadcrumb">
-            <div class="container">
-                <nav class="breadcrumb-nav">
-                    <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
-                        <?php if ($index > 0): ?>
-                            <i class="fas fa-chevron-right breadcrumb-separator"></i>
-                        <?php endif; ?>
-                        <?php if (isset($breadcrumb['url'])): ?>
-                            <a href="<?php echo $breadcrumb['url']; ?>">
-                                <?php if (isset($breadcrumb['icon'])): ?>
-                                    <i class="<?php echo $breadcrumb['icon']; ?>"></i>
-                                <?php endif; ?>
-                                <?php echo htmlspecialchars($breadcrumb['text']); ?>
-                            </a>
-                        <?php else: ?>
-                            <span><?php echo htmlspecialchars($breadcrumb['text']); ?></span>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </nav>
-            </div>
-        </div>
-    <?php endif; ?>
+    <div x-show="mobileMenuOpen" @click.away="mobileMenuOpen = false" class="lg:hidden mt-4 border-t pt-4">
+      <a href="index.php"
+        class="block px-4 py-2 rounded-md <?php $page_title === 'Trang chủ' ? 'text-gray-900' : 'text-gray-600' ?>  hover:bg-gray-100">Trang
+        chủ</a>
+      <a href="products.php"
+        class="block px-4 py-2 rounded-md <?php $page_title === 'Sản phẩm' ? 'text-gray-900' : 'text-gray-600' ?>  hover:bg-gray-100">Sản
+        phẩm</a>
 
-    <!-- Success/Error Messages -->
-    <?php if (isset($success_message)): ?>
-        <div class="alert alert-success message-slide">
-            <div class="d-flex align-center">
-                <i class="fas fa-check-circle mr-2"></i>
-                <span><?php echo $success_message; ?></span>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($error_message)): ?>
-        <div class="alert alert-danger message-slide">
-            <div class="d-flex align-center">
-                <i class="fas fa-exclamation-circle mr-2"></i>
-                <span><?php echo $error_message; ?></span>
-            </div>
-        </div>
-    <?php endif; ?>
+      <div class="border-t mt-4 pt-4 space-y-2">
+        <?php if ($logined): ?>
+        <a href="account-info.php" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Tài khoản của
+          tôi</a>
+        <a href="logout.php" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Đăng xuất</a>
+        <?php else: ?>
+        <a href="login.php"
+          class="block text-center bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">Đăng
+          nhập</a>
+        <a href="register.php"
+          class="block text-center bg-gray-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">Đăng
+          ký</a>
+        <?php endif; ?>
+      </div>
+    </div>
+  </nav>
+</header>
