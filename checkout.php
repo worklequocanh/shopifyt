@@ -1,397 +1,209 @@
 <?php
-require_once 'includes/config.php';
-session_start();
+require_once __DIR__ . '/includes/functions/auth_functions.php';
+require_once __DIR__ . '/includes/functions/functions.php';
+require_once __DIR__ . '/includes/functions/cart_functions.php';
+require_once __DIR__ . '/includes/functions/account_functions.php';
+require_once __DIR__ . '/includes/functions/order_functions.php';
 
-// Thiết lập page title và breadcrumbs
-$page_title = 'Thanh toán';
+restrictToRoles('customer');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $accountId = $_SESSION['id'];
+
+  try {
+    // Lấy thông tin phone và address của người dùng từ database
+    $stmt = $pdo->prepare("SELECT phone, address FROM accounts WHERE id = ?");
+    $stmt->execute([$accountId]);
+    $userInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Kiểm tra xem thông tin có bị thiếu không (NULL hoặc rỗng)
+    if (empty($userInfo['phone']) || empty($userInfo['address'])) {
+      // Tạo một "flash message" để hiển thị trên trang thông tin tài khoản
+      $warning_message = "Vui lòng cập nhật đầy đủ số điện thoại và địa chỉ để tiếp tục đặt hàng.";
+    } else {
+      // Gọi hàm xử lý chính
+      $orderId = createOrderFromCart($pdo);
+
+      header('Location: /checkout-success.php?orderId=' . $orderId);
+      exit();
+    }
+  } catch (PDOException $e) {
+    $error_message = 'Lỗi máy chủ, không thể kiểm tra thông tin người dùng.' . $e->getMessage();
+  }
+
+  // try {
+  //   // Gọi hàm xử lý chính
+  //   $orderId = createOrderFromCart($pdo);
+
+  //   header('Location: /checkout-success.php?id=' . $orderId);
+  //   exit();
+  // } catch (Exception $e) {
+  //   $error_message = 'Lỗi máy chủ, không thể xử lý đơn hàng.' . $e->getMessage();
+  //   // Bắt lỗi được ném ra từ hàm createOrderFromCart
+  //   http_response_code(400); // Bad Request
+  //   echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+  // }
+}
+
+$page_title = 'Hoàn tất đơn hàng';
+
 $breadcrumbs = [
-    ['text' => 'Trang chủ', 'url' => 'index.php', 'icon' => 'fas fa-home'],
-    ['text' => 'Giỏ hàng', 'url' => 'shopping-cart.php'],
-    ['text' => 'Thanh toán']
+  ['title' => 'Trang chủ', 'url' => 'index.php'],
+  ['title' => 'Thanh toán', 'url' => 'checkout.php']
 ];
 
-// Kiểm tra giỏ hàng
-if (!isset($_SESSION['cart']) || empty($_SESSION['cart'])) {
-    header('Location: shopping-cart.php');
-    exit;
-}
+$cartData = getCartData($pdo);
+$carts = $cartData['items'];
+$total_amount = $cartData['total_amount'];
 
-// Xử lý form thanh toán
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $customer_name = trim($_POST['customer_name'] ?? '');
-    $customer_email = trim($_POST['customer_email'] ?? '');
-    $customer_phone = trim($_POST['customer_phone'] ?? '');
-    $customer_address = trim($_POST['customer_address'] ?? '');
-    $payment_method = $_POST['payment_method'] ?? '';
-    $notes = trim($_POST['notes'] ?? '');
+$customer = getLoggedInUserInfo($pdo);
 
-    // Validation
-    $errors = [];
-
-    if (empty($customer_name)) {
-        $errors[] = 'Vui lòng nhập họ và tên';
-    }
-
-    if (empty($customer_email) || !filter_var($customer_email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Vui lòng nhập email hợp lệ';
-    }
-
-    if (empty($customer_phone)) {
-        $errors[] = 'Vui lòng nhập số điện thoại';
-    }
-
-    if (empty($customer_address)) {
-        $errors[] = 'Vui lòng nhập địa chỉ giao hàng';
-    }
-
-    if (empty($payment_method)) {
-        $errors[] = 'Vui lòng chọn phương thức thanh toán';
-    }
-
-    if (empty($errors)) {
-        try {
-            // Tính tổng tiền
-            $total_amount = 0;
-            $order_items = [];
-
-            $product_ids = array_keys($_SESSION['cart']);
-            $placeholders = str_repeat('?,', count($product_ids) - 1) . '?';
-
-            $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
-            $stmt->execute($product_ids);
-            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            foreach ($products as $product) {
-                $quantity = $_SESSION['cart'][$product['id']];
-                $subtotal = $product['price'] * $quantity;
-                $total_amount += $subtotal;
-
-                $order_items[] = [
-                    'product' => $product,
-                    'quantity' => $quantity,
-                    'subtotal' => $subtotal
-                ];
-            }
-
-            // Tạo đơn hàng
-            $pdo->beginTransaction();
-
-            // Insert vào bảng orders
-            $order_stmt = $pdo->prepare("INSERT INTO orders (account_id, total_amount, status) VALUES (?, ?, 'pending')");
-            $order_stmt->execute([1, $total_amount]); // account_id = 1 cho guest
-            $order_id = $pdo->lastInsertId();
-
-            // Insert vào bảng order_details
-            $detail_stmt = $pdo->prepare("INSERT INTO order_details (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)");
-            foreach ($order_items as $item) {
-                $detail_stmt->execute([
-                    $order_id,
-                    $item['product']['id'],
-                    $item['quantity'],
-                    $item['product']['price']
-                ]);
-            }
-
-            $pdo->commit();
-
-            // Lưu thông tin đơn hàng vào session
-            $_SESSION['order_info'] = [
-                'order_id' => $order_id,
-                'customer_name' => $customer_name,
-                'customer_email' => $customer_email,
-                'customer_phone' => $customer_phone,
-                'customer_address' => $customer_address,
-                'payment_method' => $payment_method,
-                'total_amount' => $total_amount,
-                'shipping_fee' => 0,
-                'final_total' => $total_amount,
-                'notes' => $notes
-            ];
-
-            // Xóa giỏ hàng
-            unset($_SESSION['cart']);
-
-            // Redirect đến trang thành công
-            header('Location: checkout-success.php');
-            exit;
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $error_message = "Lỗi xử lý đơn hàng: " . $e->getMessage();
-        }
-    } else {
-        $error_message = implode('<br>', $errors);
-    }
-}
-
-// Lấy thông tin sản phẩm trong giỏ hàng
-$cart_items = [];
-$total_amount = 0;
-
-$product_ids = array_keys($_SESSION['cart']);
-$placeholders = str_repeat('?,', count($product_ids) - 1) . '?';
-
-try {
-    $stmt = $pdo->prepare("SELECT p.*, pi.image_url FROM products p 
-                          LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_main = 1 
-                          WHERE p.id IN ($placeholders)");
-    $stmt->execute($product_ids);
-    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach ($products as $product) {
-        $quantity = $_SESSION['cart'][$product['id']];
-        $subtotal = $product['price'] * $quantity;
-        $total_amount += $subtotal;
-
-        $cart_items[] = [
-            'product' => $product,
-            'quantity' => $quantity,
-            'subtotal' => $subtotal
-        ];
-    }
-} catch (Exception $e) {
-    $cart_items = [];
-    $error_message = "Lỗi tải giỏ hàng: " . $e->getMessage();
-}
-
-// Include header
-include 'includes/layouts/header.php';
 ?>
 
-<!-- Main Content -->
-<main class="section">
-    <div class="container">
-        <div class="text-center mb-8">
-            <h1 class="page-title">Thanh toán</h1>
-            <p class="page-subtitle">Hoàn tất thông tin để đặt hàng</p>
-        </div>
+<!DOCTYPE html>
+<html lang="vi">
 
-        <div class="checkout-layout">
-            <!-- Checkout Form -->
-            <div class="checkout-form">
-                <form method="POST" class="checkout-form-content">
-                    <!-- Customer Information -->
-                    <div class="form-section">
-                        <h2 class="form-section-title">
-                            <i class="fas fa-user"></i>
-                            Thông tin khách hàng
-                        </h2>
+<head>
+  <?php include __DIR__ . '/includes/layouts/head.php'; ?>
+</head>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="customer_name">Họ và tên *</label>
-                                <input type="text" id="customer_name" name="customer_name"
-                                    value="<?php echo htmlspecialchars($_POST['customer_name'] ?? ''); ?>"
-                                    required class="form-input">
-                            </div>
-                            <div class="form-group">
-                                <label for="customer_email">Email *</label>
-                                <input type="email" id="customer_email" name="customer_email"
-                                    value="<?php echo htmlspecialchars($_POST['customer_email'] ?? ''); ?>"
-                                    required class="form-input">
-                            </div>
-                        </div>
+<body class="bg-gray-100">
+  <?php include __DIR__ . '/includes/layouts/header.php'; ?>
+  <?php include __DIR__ . '/includes/layouts/breadcrumbs.php'; ?>
+  <?php include __DIR__ . '/includes/layouts/messages.php'; ?>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="customer_phone">Số điện thoại *</label>
-                                <input type="tel" id="customer_phone" name="customer_phone"
-                                    value="<?php echo htmlspecialchars($_POST['customer_phone'] ?? ''); ?>"
-                                    required class="form-input">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="customer_address">Địa chỉ giao hàng *</label>
-                            <textarea id="customer_address" name="customer_address"
-                                required class="form-textarea" rows="3"><?php echo htmlspecialchars($_POST['customer_address'] ?? ''); ?></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Payment Method -->
-                    <div class="form-section">
-                        <h2 class="form-section-title">
-                            <i class="fas fa-credit-card"></i>
-                            Phương thức thanh toán
-                        </h2>
-
-                        <div class="payment-methods">
-                            <label class="payment-method">
-                                <input type="radio" name="payment_method" value="cod"
-                                    <?php echo ($_POST['payment_method'] ?? '') === 'cod' ? 'checked' : ''; ?>>
-                                <div class="payment-method-content">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                    <div>
-                                        <h4>Thanh toán khi nhận hàng</h4>
-                                        <p>Thanh toán bằng tiền mặt khi nhận hàng</p>
-                                    </div>
-                                </div>
-                            </label>
-
-                            <label class="payment-method">
-                                <input type="radio" name="payment_method" value="bank_transfer"
-                                    <?php echo ($_POST['payment_method'] ?? '') === 'bank_transfer' ? 'checked' : ''; ?>>
-                                <div class="payment-method-content">
-                                    <i class="fas fa-university"></i>
-                                    <div>
-                                        <h4>Chuyển khoản ngân hàng</h4>
-                                        <p>Chuyển khoản qua ngân hàng</p>
-                                    </div>
-                                </div>
-                            </label>
-
-                            <label class="payment-method">
-                                <input type="radio" name="payment_method" value="momo"
-                                    <?php echo ($_POST['payment_method'] ?? '') === 'momo' ? 'checked' : ''; ?>>
-                                <div class="payment-method-content">
-                                    <i class="fas fa-mobile-alt"></i>
-                                    <div>
-                                        <h4>Ví MoMo</h4>
-                                        <p>Thanh toán qua ví điện tử MoMo</p>
-                                    </div>
-                                </div>
-                            </label>
-
-                            <label class="payment-method">
-                                <input type="radio" name="payment_method" value="vnpay"
-                                    <?php echo ($_POST['payment_method'] ?? '') === 'vnpay' ? 'checked' : ''; ?>>
-                                <div class="payment-method-content">
-                                    <i class="fas fa-credit-card"></i>
-                                    <div>
-                                        <h4>VNPay</h4>
-                                        <p>Thanh toán qua VNPay</p>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Order Notes -->
-                    <div class="form-section">
-                        <h2 class="form-section-title">
-                            <i class="fas fa-sticky-note"></i>
-                            Ghi chú đơn hàng
-                        </h2>
-
-                        <div class="form-group">
-                            <label for="notes">Ghi chú (tùy chọn)</label>
-                            <textarea id="notes" name="notes" class="form-textarea" rows="3"
-                                placeholder="Ghi chú thêm về đơn hàng..."><?php echo htmlspecialchars($_POST['notes'] ?? ''); ?></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <a href="shopping-cart.php" class="btn btn-outline-primary">
-                            <i class="fas fa-arrow-left"></i>
-                            Quay lại giỏ hàng
-                        </a>
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-check"></i>
-                            Đặt hàng
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Order Summary -->
-            <div class="order-summary">
-                <div class="summary-header">
-                    <h3>Tóm tắt đơn hàng</h3>
-                </div>
-
-                <div class="summary-items">
-                    <?php foreach ($cart_items as $item):
-                        $product = $item['product'];
-                        $quantity = $item['quantity'];
-                        $subtotal = $item['subtotal'];
-                        $image_url = $product['image_url'] ?: 'assets/img/product/product-1.jpg';
-                    ?>
-                        <div class="summary-item">
-                            <div class="item-image">
-                                <img src="<?php echo $image_url; ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
-                            </div>
-                            <div class="item-details">
-                                <h4><?php echo htmlspecialchars($product['name']); ?></h4>
-                                <p>Số lượng: <?php echo $quantity; ?></p>
-                                <span class="item-price"><?php echo number_format($subtotal, 0, ',', '.'); ?>đ</span>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <div class="summary-totals">
-                    <div class="total-row">
-                        <span>Tạm tính:</span>
-                        <span><?php echo number_format($total_amount, 0, ',', '.'); ?>đ</span>
-                    </div>
-                    <div class="total-row">
-                        <span>Phí vận chuyển:</span>
-                        <span class="free-shipping">Miễn phí</span>
-                    </div>
-                    <div class="total-row total">
-                        <span>Tổng cộng:</span>
-                        <span><?php echo number_format($total_amount, 0, ',', '.'); ?>đ</span>
-                    </div>
-                </div>
-
-                <div class="summary-benefits">
-                    <div class="benefit-item">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>Bảo hành chính hãng</span>
-                    </div>
-                    <div class="benefit-item">
-                        <i class="fas fa-truck"></i>
-                        <span>Giao hàng miễn phí</span>
-                    </div>
-                    <div class="benefit-item">
-                        <i class="fas fa-undo"></i>
-                        <span>Đổi trả trong 30 ngày</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <main class="container mx-auto px-4 lg:px-6 py-12 lg:py-20">
+    <div class="text-center mb-12">
+      <a href="index.php" class="text-3xl font-bold text-gray-900">STYLEX</a>
+      <h1 class="mt-4 text-3xl lg:text-4xl font-extrabold text-gray-900">
+        Hoàn tất đơn hàng
+      </h1>
     </div>
-</main>
 
-<?php
-// Page-specific JavaScript
-$page_scripts = '
-    // Form validation
-    document.querySelector(".checkout-form-content").addEventListener("submit", function(e) {
-        const requiredFields = this.querySelectorAll("[required]");
-        let isValid = true;
-        
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                field.classList.add("error");
-                isValid = false;
-            } else {
-                field.classList.remove("error");
-            }
-        });
-        
-        if (!isValid) {
-            e.preventDefault();
-            alert("Vui lòng điền đầy đủ thông tin bắt buộc");
-        }
-    });
-    
-    // Payment method selection
-    document.querySelectorAll("input[name=\"payment_method\"]").forEach(radio => {
-        radio.addEventListener("change", function() {
-            document.querySelectorAll(".payment-method").forEach(method => {
-                method.classList.remove("selected");
-            });
-            this.closest(".payment-method").classList.add("selected");
-        });
-    });
-    
-    // Initialize selected payment method
-    const selectedPayment = document.querySelector("input[name=\"payment_method\"]:checked");
-    if (selectedPayment) {
-        selectedPayment.closest(".payment-method").classList.add("selected");
-    }
-';
+    <div class="grid grid-cols-1 lg:grid-cols-2 lg:gap-16">
+      <div class="lg:hidden bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 class="text-xl font-bold mb-4">Tóm tắt đơn hàng</h2>
+        <?php if (!empty($carts)): ?>
+          <?php foreach ($carts as $item): ?>
+            <div class="flex justify-between items-center text-sm mb-2">
+              <span class="text-gray-600">
+                <?php echo htmlspecialchars($item['name']); ?> x <?php echo $item['quantity']; ?>
+              </span>
+              <span class="font-medium"><?php echo format_currency((int)$item['price'] * (int)$item['quantity']) ?></span>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+        <div class="border-t mt-4 pt-4 space-y-2">
+          <div class="flex justify-between text-gray-600">
+            <span>Tạm tính</span><span><?php echo format_currency($total_amount); ?></span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>Phí vận chuyển</span><span>Miễn phí</span>
+          </div>
+          <div class="flex justify-between font-bold text-lg">
+            <span>Tổng cộng</span><span><?php echo format_currency($total_amount); ?></span>
+          </div>
+        </div>
+      </div>
 
-// Include footer
-include 'includes/layouts/footer.php';
-?>
+      <div class="bg-white p-6 lg:p-8 rounded-lg shadow-md">
+        <h2 class="text-2xl font-bold mb-8">Thông tin giao hàng</h2>
+
+        <form method="POST">
+          <div class="space-y-6">
+
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-8 text-center">
+                <svg class="h-6 w-6 mx-auto text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                  viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                </svg>
+              </div>
+              <div class="flex-grow">
+                <p class="text-sm text-gray-500">Họ và tên</p>
+                <p class="font-semibold text-gray-800 text-lg">
+                  <?= htmlspecialchars($customer['name'] ?? 'Nguyễn Văn A') ?>
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-8 text-center">
+                <svg class="h-6 w-6 mx-auto text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                  viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 6.75Z" />
+                </svg>
+              </div>
+              <div class="flex-grow">
+                <p class="text-sm text-gray-500">Số điện thoại</p>
+                <p class="font-semibold text-gray-800 text-lg">
+                  <?= htmlspecialchars($customer['phone'] ?? '0901234567') ?>
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-8 text-center">
+                <svg class="h-6 w-6 mx-auto text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                  viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                </svg>
+              </div>
+              <div class="flex-grow">
+                <p class="text-sm text-gray-500">Địa chỉ</p>
+                <p class="font-semibold text-gray-800 text-lg">
+                  <?= htmlspecialchars($customer['address'] ?? '123 Đường ABC, Phường X, Quận Y, TP. Z') ?>
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="pt-8 mt-8 border-t">
+            <button type="submit"
+              class="w-full bg-gray-900 text-white font-bold py-4 rounded-lg hover:bg-gray-800 transition-colors">
+              Xác nhận và Đặt hàng
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="hidden lg:block bg-white p-8 rounded-lg shadow-md self-start">
+        <h2 class="text-2xl font-bold mb-6">Tóm tắt đơn hàng</h2>
+        <?php if (!empty($carts)): ?>
+          <?php foreach ($carts as $item): ?>
+            <div class="flex justify-between items-center mb-4">
+              <div class="flex items-center gap-4">
+                <img src="<?php echo htmlspecialchars($item['main_image']); ?>"
+                  alt="<?php echo htmlspecialchars($item['name']); ?>" class="w-16 h-16 object-cover rounded-md" />
+                <div>
+                  <p class="font-semibold"><?php echo htmlspecialchars($item['name']); ?></p>
+                  <p class="text-sm text-gray-500">Số lượng: <?php echo $item['quantity']; ?></p>
+                </div>
+              </div>
+              <span class="font-medium"><?php echo format_currency((int)$item['price'] * (int)$item['quantity']); ?></span>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+        <div class="border-t mt-6 pt-6 space-y-3">
+          <div class="flex justify-between text-gray-600">
+            <span>Tạm tính</span><span><?php echo format_currency($total_amount); ?></span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>Phí vận chuyển</span><span>Miễn phí</span>
+          </div>
+          <div class="flex justify-between font-bold text-xl">
+            <span>Tổng cộng</span><span><?php echo format_currency($total_amount); ?></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <?php include __DIR__ . '/includes/layouts/footer.php'; ?>
+</body>
+
+</html>

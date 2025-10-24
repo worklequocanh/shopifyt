@@ -1,95 +1,73 @@
 <?php
-session_start();
-include_once("includes/config.php");
-include_once("includes/auth.php");
-include_once("includes/functions.php");
+
+require_once __DIR__ . '/includes/functions/auth_functions.php';
+
+$page_title = 'Đăng nhập';
 
 redirectIfLoggedIn();
 
-// Kiểm tra nếu form được submit
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Lấy dữ liệu từ form
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+  $email = trim($_POST['email'] ?? '');
+  $password = $_POST['password'] ?? '';
 
-    // Mảng chứa lỗi
-    $errors = [];
 
-    // Validate dữ liệu
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Email không hợp lệ";
-    }
+  if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $error_message = "Email không hợp lệ";
+  }
 
-    if (empty($password)) {
-        $errors[] = "Mật khẩu là bắt buộc";
-    }
+  if (empty($password)) {
+    $error_message = "Mật khẩu là bắt buộc";
+  }
 
-    // Nếu không có lỗi validate, kiểm tra thông tin đăng nhập
-    if (empty($errors)) {
-        try {
-            // Truy vấn kiểm tra email
-            $stmt = $pdo->prepare("SELECT * FROM accounts WHERE email = ?");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // Kiểm tra xem email tồn tại và mật khẩu có khớp
-            if ($user && password_verify($password, $user['password'])) {
-                // Lưu thông tin vào session
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_name'] = $user['name'];
-
-                // Chuyển hướng đến trang chính (hoặc trang bạn muốn)
-                header("Location: /");
-                exit();
-            } else {
-                $errors[] = "Email hoặc mật khẩu không đúng";
-            }
-        } catch (PDOException $e) {
-            $errors[] = "Lỗi đăng nhập: " . $e->getMessage();
-        }
-    }
+  $result = loginUser($pdo, $email, $password);
+  if (!$result['success']) {
+    $error_message = $result['message'];
+  }
 }
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <?php include __DIR__ . '/includes/layouts/head.php'; ?>
 </head>
 
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-    <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
-        <!-- Login Form -->
-        <div id="login-form" class="space-y-6">
-            <h2 class="text-2xl font-bold text-center">Login</h2>
+<body class="bg-gray-100">
+  <div class="flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 md:p-12 rounded-xl shadow-2xl w-full max-w-md">
+      <div class="text-center mb-8">
+        <a href="index.php" class="text-3xl font-bold text-gray-900">STYLEX</a>
+        <h2 class="mt-4 text-2xl font-bold text-gray-800">
+          Chào mừng trở lại!
+        </h2>
+        <p class="text-gray-500">Đăng nhập để tiếp tục.</p>
+      </div>
 
-            <?php if (!empty($errors)): ?>
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <?php foreach ($errors as $error): ?>
-                        <p><?php echo htmlspecialchars($error); ?></p>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+      <?php include __DIR__ . '/includes/layouts/messages.php'; ?>
 
-            <form id="loginForm" method="POST" action="" class="space-y-4">
-                <div>
-                    <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input id="login-email" type="email" name="email" value="<?php echo htmlspecialchars($email ?? ''); ?>" class="mt-1 w-full px-3 py-2 border rounded-md" required>
-                </div>
-                <div>
-                    <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <input id="login-password" type="password" name="password" class="mt-1 w-full px-3 py-2 border rounded-md" required>
-                </div>
-                <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600">Login</button>
-            </form>
-            <p class="text-center text-sm">Don't have an account? <a href="/register.php" class="text-blue-500">Register</a></p>
+      <form class="space-y-6" method="POST">
+        <div>
+          <label for="email" class="font-medium text-sm">Email</label>
+          <input type="email" id="email" name="email"
+            class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
         </div>
+        <div>
+          <label for="password" class="font-medium text-sm">Mật khẩu</label>
+          <input type="password" id="password" name="password"
+            class="w-full mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+        <button class="w-full bg-gray-900 text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-colors">
+          Đăng nhập
+        </button>
+      </form>
+      <p class="text-center text-sm text-gray-500 mt-8">
+        Chưa có tài khoản?
+        <a href="/register.php" class="font-medium text-blue-600 hover:underline">Đăng ký ngay</a>
+      </p>
     </div>
-
+  </div>
 </body>
 
 </html>
