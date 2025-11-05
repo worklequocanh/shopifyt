@@ -30,7 +30,7 @@ function getOrderHistoryForAccount(PDO $pdo): array
     'pending'   => 'Đang xử lý',
     'paid'      => 'Đã thanh toán',
     'shipped'   => 'Đang giao hàng',
-    'completed' => 'Hoàn thành',
+    'accepted' => 'Hoàn thành',
     'cancelled' => 'Đã hủy'
   ];
 

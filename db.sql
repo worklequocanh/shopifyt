@@ -89,7 +89,7 @@ CREATE TABLE `orders` (
   `shipping_phone` VARCHAR(15) NOT NULL,
   `total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (`total_amount` >= 0),
   `order_date` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `status` ENUM('pending', 'paid', 'shipped', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+  `status` ENUM('pending', 'accepted', 'cancelled') NOT NULL DEFAULT 'pending',
   FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON DELETE CASCADE,
   INDEX `idx_account_id` (`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

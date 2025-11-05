@@ -5,7 +5,6 @@ require_once __DIR__ . '/includes/functions/functions.php';
 require_once __DIR__ . '/includes/functions/product_functions.php';
 require_once __DIR__ . '/includes/functions/category_functions.php';
 
-
 $products_per_page = 12;
 
 $total_products = countAllProducts($pdo);
@@ -53,8 +52,8 @@ if ($categoryId !== 'all') {
 <head>
   <?php include __DIR__ . '/includes/layouts/head.php'; ?>
   <script>
-  console.log(<?php echo json_encode($categories); ?>);
-  console.log('<?php echo $categoryId; ?>');
+    console.log(<?php echo json_encode($categories); ?>);
+    console.log('<?php echo $categoryId; ?>');
   </script>
 </head>
 
@@ -106,12 +105,12 @@ if ($categoryId !== 'all') {
               </li>
               </li>
               <?php foreach ($categories as $category): ?>
-              <li>
-                <a href="/products.php?categoryId=<?php echo htmlspecialchars($category['id']); ?>"
-                  class="<?php echo htmlspecialchars($category['id'] == $categoryId ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600'); ?>">
-                  <?php echo htmlspecialchars($category['name']); ?>
-                </a>
-              </li>
+                <li>
+                  <a href="/products.php?categoryId=<?php echo htmlspecialchars($category['id']); ?>"
+                    class="<?php echo htmlspecialchars($category['id'] == $categoryId ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600'); ?>">
+                    <?php echo htmlspecialchars($category['name']); ?>
+                  </a>
+                </li>
               <?php endforeach; ?>
             </ul>
           </div>
@@ -122,35 +121,35 @@ if ($categoryId !== 'all') {
         <div class="w-full lg:w-3/4">
           <div class="grid grid-cols-2 md:grid-cols-3 gap-6 lg:gap-8">
             <?php if (!empty($products)): ?>
-            <?php foreach ($products as $product): ?>
-            <a href="/product-detail.php?id=<?php echo htmlspecialchars($product['id']) ?>" class="block group">
-              <div
-                class="group bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:-translate-y-2">
-                <div class="relative overflow-hidden">
-                  <img src="<?php echo htmlspecialchars($product['main_image']);  ?>"
-                    alt="<?php echo htmlspecialchars($product['name']); ?>"
-                    class="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
-                </div>
-                <div class="p-4">
-                  <h3 class="font-semibold text-lg truncate">
-                    <?php echo htmlspecialchars($product['name']); ?>
-                  </h3>
-                  <p><?php echo htmlspecialchars($product['id']); ?></p>
-                  <p class="text-gray-600 mt-2 font-bold text-xl">
-                    <?php echo htmlspecialchars(format_currency($product['price'])); ?>đ
-                  </p>
-                </div>
-              </div>
-            </a>
-            <?php endforeach; ?>
+              <?php foreach ($products as $product): ?>
+                <a href="/product-detail.php?id=<?php echo htmlspecialchars($product['id']) ?>" class="block group">
+                  <div
+                    class="group bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:-translate-y-2">
+                    <div class="relative overflow-hidden">
+                      <img src="<?php echo htmlspecialchars($product['main_image']);  ?>"
+                        alt="<?php echo htmlspecialchars($product['name']); ?>"
+                        class="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                    <div class="p-4">
+                      <h3 class="font-semibold text-lg truncate">
+                        <?php echo htmlspecialchars($product['name']); ?>
+                      </h3>
+                      <p><?php echo htmlspecialchars($product['id']); ?></p>
+                      <p class="text-gray-600 mt-2 font-bold text-xl">
+                        <?php echo htmlspecialchars(format_currency($product['price'])); ?>đ
+                      </p>
+                    </div>
+                  </div>
+                </a>
+              <?php endforeach; ?>
             <?php else: ?>
-            <div class="text-center py-16 border rounded-lg bg-white">
-              <p class="text-xl text-gray-500">Không tìm thấy sản phẩm nào.</p>
-              <a href="index.php"
-                class="inline-block mt-6 bg-gray-900 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors">
-                Quay về trang chủ
-              </a>
-            </div>
+              <div class="text-center py-16 border rounded-lg bg-white">
+                <p class="text-xl text-gray-500">Không tìm thấy sản phẩm nào.</p>
+                <a href="index.php"
+                  class="inline-block mt-6 bg-gray-900 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors">
+                  Quay về trang chủ
+                </a>
+              </div>
             <?php endif; ?>
 
           </div>

@@ -1,10 +1,9 @@
 <?php
-
 require_once __DIR__ . '/includes/functions/auth_functions.php';
 
-$page_title = 'Đăng ký';
-
 redirectIfLoggedIn();
+
+$page_title = 'Đăng ký';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
   // Lấy dữ liệu từ form

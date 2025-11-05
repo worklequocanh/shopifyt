@@ -43,7 +43,7 @@ function loginUser(PDO $pdo, string $email, string $password)
 
     if ($user && password_verify($password, $user['password'])) {
       session_regenerate_id(true);
-      $_SESSION['id'] = $user['id'] ?? 2;
+      $_SESSION['id'] = $user['id'] ?? 3;
       $_SESSION['name'] = $user['name'] ?? 'Nguyen Van A';
       $_SESSION['role'] = $user['role'] ?? 'customer';
 
@@ -73,7 +73,7 @@ function logout(): void
   if (isLoggedIn()) {
     $uri = '/';
     if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'employee') {
-      $uri = '/admin/login.php';
+      $uri = '/login.php';
     } else {
       $uri = '/index.php';
     }
@@ -83,7 +83,7 @@ function logout(): void
     exit();
   }
 
-  header("Location: /");
+  header(header: "Location: /");
   exit();
 }
 
@@ -111,9 +111,9 @@ function restrictToRoles($allowedRoles, $redirectIfNotLoggedIn = '/login.php')
     exit();
   }
 
-  $role = $_SESSION['role'];
+  $currentRole = $_SESSION['role'];
 
-  if (!in_array($role, ['admin', 'employee', 'customer'])) {
+  if (!in_array($currentRole, ['admin', 'employee', 'customer'])) {
     session_unset();
     session_destroy();
 
@@ -121,15 +121,17 @@ function restrictToRoles($allowedRoles, $redirectIfNotLoggedIn = '/login.php')
     exit();
   }
 
-  if ($role !== $allowedRoles) {
-    if ($role === 'admin' || $role === 'employee') {
-      header("Location: /admin/index.php");
-      exit();
-    } elseif ($role === 'customer') {
-      header("Location: /index.php");
-      exit();
-    } else {
-      logout();
+  if ($currentRole !== $allowedRoles) {
+    if (!in_array($currentRole, $allowedRoles)) {
+      if (in_array($currentRole, ["admin", "employee"])) {
+        header("Location: /admin/index.php");
+        exit();
+      } elseif (in_array($currentRole, ["customer"])) {
+        header("Location: /index.php");
+        exit();
+      } else {
+        logout();
+      }
     }
   }
 }

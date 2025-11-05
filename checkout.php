@@ -30,19 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } catch (PDOException $e) {
     $error_message = 'Lỗi máy chủ, không thể kiểm tra thông tin người dùng.' . $e->getMessage();
   }
-
-  // try {
-  //   // Gọi hàm xử lý chính
-  //   $orderId = createOrderFromCart($pdo);
-
-  //   header('Location: /checkout-success.php?id=' . $orderId);
-  //   exit();
-  // } catch (Exception $e) {
-  //   $error_message = 'Lỗi máy chủ, không thể xử lý đơn hàng.' . $e->getMessage();
-  //   // Bắt lỗi được ném ra từ hàm createOrderFromCart
-  //   http_response_code(400); // Bad Request
-  //   echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-  // }
 }
 
 $page_title = 'Hoàn tất đơn hàng';
