@@ -6,12 +6,12 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1. THÊM DỮ LIỆU BẢNG `accounts`
 -- ----------------------------
 INSERT INTO `accounts` (`id`, `name`, `password`, `email`, `phone`, `address`, `role`, `is_active`) VALUES
-(1, 'Admin Manager', 'hashed_password', 'admin@example.com', '0901234567', '123 Đường Admin, Quận 1, TP.HCM', 'admin', 1),
-(2, 'Nhân Viên Kho', 'hashed_password', 'employee@example.com', '0912345678', '456 Đường Nhân Viên, Quận 3, TP.HCM', 'employee', 1),
-(3, 'Nguyễn Anh Thư', 'hashed_password', 'customer1@example.com', '0987654321', '111 Nguyễn Trãi, Quận 5, TP.HCM', 'customer', 1),
-(4, 'Trần Minh Hoàng', 'hashed_password', 'customer2@example.com', '0911223344', '222 Lê Văn Sỹ, Quận Tân Bình, TP.HCM', 'customer', 1),
-(5, 'Lê Thị Bích', 'hashed_password', 'customer3@example.com', '0933445566', '333 Võ Văn Tần, Quận 3, TP.HCM', 'customer', 1);
-
+(1, 'Admin Manager', '$2y$10$20ZjvxQPJyMJNbCNqTVsMetW6Z6bLILry7PIUI9Hn5NTCO1WOli9y', 'admin@example.com', '0901234567', '123 Đường Admin, Quận 1, TP.HCM', 'admin', 1),
+(2, 'Nhân Viên Kho', '$2y$10$20ZjvxQPJyMJNbCNqTVsMetW6Z6bLILry7PIUI9Hn5NTCO1WOli9y', 'employee@example.com', '0912345678', '456 Đường Nhân Viên, Quận 3, TP.HCM', 'employee', 1),
+(3, 'Nguyễn Anh Thư', '$2y$10$20ZjvxQPJyMJNbCNqTVsMetW6Z6bLILry7PIUI9Hn5NTCO1WOli9y', 'customer1@example.com', '0987654321', '111 Nguyễn Trãi, Quận 5, TP.HCM', 'customer', 1),
+(4, 'Trần Minh Hoàng', '$2y$10$20ZjvxQPJyMJNbCNqTVsMetW6Z6bLILry7PIUI9Hn5NTCO1WOli9y', 'customer2@example.com', '0911223344', '222 Lê Văn Sỹ, Quận Tân Bình, TP.HCM', 'customer', 1),
+(5, 'Lê Thị Bích', '$2y$10$20ZjvxQPJyMJNbCNqTVsMetW6Z6bLILry7PIUI9Hn5NTCO1WOli9y', 'customer3@example.com', '0933445566', '333 Võ Văn Tần, Quận 3, TP.HCM', 'customer', 1);
+-- Mật khẩu chung: 123456
 -- ----------------------------
 -- 2. THÊM DỮ LIỆU BẢNG `categories`
 -- ----------------------------
