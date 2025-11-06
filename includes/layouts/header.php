@@ -34,32 +34,32 @@
         </a>
 
         <?php if ($logined): ?>
-        <div class="relative hidden lg:block">
-          <button @click="userMenuOpen = !userMenuOpen" class="text-gray-500 hover:text-gray-900">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </button>
-          <div x-show="userMenuOpen" @click.away="userMenuOpen = false" x-transition
-            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50">
-            <div class="px-4 py-2 text-sm text-gray-700">Chào, <span
-                class="font-medium"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Bạn'); ?></span></div>
-            <a href="account-info.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Tài khoản của
-              tôi</a>
-            <a href="logout.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Đăng xuất</a>
+          <div class="relative hidden lg:block">
+            <button @click="userMenuOpen = !userMenuOpen" class="text-gray-500 hover:text-gray-900">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </button>
+            <div x-show="userMenuOpen" @click.away="userMenuOpen = false" x-transition
+              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50">
+              <div class="px-4 py-2 text-sm text-gray-700">Chào, <span
+                  class="font-medium"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Bạn'); ?></span></div>
+              <a href="account-info.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Tài khoản của
+                tôi</a>
+              <a href="../../actions/logout.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Đăng xuất</a>
+            </div>
           </div>
-        </div>
         <?php else: ?>
-        <div class="hidden lg:flex items-center space-x-2">
-          <a href="login.php"
-            class="bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">Đăng
-            nhập</a>
-          <a href="register.php"
-            class="bg-gray-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm">Đăng
-            ký</a>
-        </div>
+          <div class="hidden lg:flex items-center space-x-2">
+            <a href="login.php"
+              class="bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">Đăng
+              nhập</a>
+            <a href="register.php"
+              class="bg-gray-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm">Đăng
+              ký</a>
+          </div>
         <?php endif; ?>
 
         <button @click="mobileMenuOpen = !mobileMenuOpen" class="lg:hidden text-gray-500 hover:text-gray-900">
@@ -80,16 +80,16 @@
 
       <div class="border-t mt-4 pt-4 space-y-2">
         <?php if ($logined): ?>
-        <a href="account-info.php" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Tài khoản của
-          tôi</a>
-        <a href="logout.php" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Đăng xuất</a>
+          <a href="account-info.php" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Tài khoản của
+            tôi</a>
+          <a href="../../actions/logout.php" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Đăng xuất</a>
         <?php else: ?>
-        <a href="login.php"
-          class="block text-center bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">Đăng
-          nhập</a>
-        <a href="register.php"
-          class="block text-center bg-gray-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">Đăng
-          ký</a>
+          <a href="login.php"
+            class="block text-center bg-gray-100 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">Đăng
+            nhập</a>
+          <a href="register.php"
+            class="block text-center bg-gray-900 text-white font-semibold px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">Đăng
+            ký</a>
         <?php endif; ?>
       </div>
     </div>

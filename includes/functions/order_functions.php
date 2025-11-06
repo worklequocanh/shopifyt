@@ -60,14 +60,14 @@ function createOrderFromCart(PDO $pdo): int
         $orderDetailStmt = $pdo->prepare(
             "INSERT INTO order_details (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)"
         );
-        $updateStockStmt = $pdo->prepare(
-            "UPDATE products SET stock = stock - ? WHERE id = ?"
-        );
+        // $updateStockStmt = $pdo->prepare(
+        //     "UPDATE products SET stock = stock - ? WHERE id = ?"
+        // );
 
         foreach ($cart as $productId => $quantity) {
             $product = $productsInDb[$productId];
             $orderDetailStmt->execute([$orderId, $productId, $quantity, $product['price']]);
-            $updateStockStmt->execute([$quantity, $productId]);
+            // $updateStockStmt->execute([$quantity, $productId]);
         }
 
         // 6. LÀM RỖNG GIỎ HÀNG

@@ -88,7 +88,7 @@ $customer = getLoggedInUserInfo($pdo);
               <span>Đổi mật khẩu</span>
             </a>
 
-            <a href="logout.php"
+            <a href="./actions/logout.php"
               class="flex items-center gap-3 px-4 py-3 rounded-md text-red-600 hover:bg-red-50 font-medium">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd"
