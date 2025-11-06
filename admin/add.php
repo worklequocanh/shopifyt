@@ -34,12 +34,18 @@ if (isset($_POST['add'])) {
                 $img_sql = "INSERT INTO product_images (product_id, image_url, is_main) 
                                 VALUES (?, ?, 1)";
                 $stmt = $pdo->prepare($img_sql);
-                $stmt->execute([$product_id, $img_path]);;
+                $stmt->execute([$product_id, $img_path]);
+                // product-sale.png
                 $_SESSION['success_message'] = 'Thêm sản phẩm thành công!';
             } else {
                 $_SESSION['error_message'] = $upload_result['message'];
             }
         } else {
+            $img_sql = "INSERT INTO product_images (product_id, image_url, is_main) 
+                                VALUES (?, '/assets/img/product-sale.png', 1)";
+            $stmt = $pdo->prepare($img_sql);
+            $stmt->execute([$product_id]);
+
             $_SESSION['success_message'] = 'Thêm sản phẩm thành công (chưa có ảnh).';
         }
     } else {

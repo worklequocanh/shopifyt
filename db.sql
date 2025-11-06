@@ -40,7 +40,6 @@ CREATE TABLE `categories` (
   `name` VARCHAR(255) NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`parent_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
@@ -102,11 +101,12 @@ CREATE TABLE `order_details` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `order_id` INT UNSIGNED NOT NULL,
   `product_id` INT UNSIGNED NOT NULL,
+  `product_name` VARCHAR(255) NOT NULL,
   `quantity` INT UNSIGNED NOT NULL CHECK (`quantity` > 0),
   `unit_price` DECIMAL(10, 2) NOT NULL CHECK (`unit_price` >= 0) COMMENT 'Giá sản phẩm tại thời điểm mua',
   `subtotal` DECIMAL(12, 2) GENERATED ALWAYS AS (`quantity` * `unit_price`) STORED,
   FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT,
+  -- FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT,
   INDEX `idx_order_id_details` (`order_id`),
   INDEX `idx_product_id_details` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

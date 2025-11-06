@@ -55,29 +55,60 @@ if (isset($_POST['update_account'])) {
     $salary = floatval($_POST['salary'] ?? 0);
     $is_active = isset($_POST['is_active']) ? 1 : 0;
 
+    $sql_role_old = "select role from accounts where id=?";
+    $stmt_role_old = $pdo->prepare($sql_role_old);
+    $stmt_role_old->execute([$acc_id]);
+    $role_old = $stmt_role_old->fetch(PDO::FETCH_ASSOC);
+
     // Kiểm tra email trùng (trừ chính nó)
     $check_email = $pdo->prepare("SELECT id FROM accounts WHERE email=? AND id != ?");
     $check_email->execute([$email, $acc_id]);
     if ($check_email->fetch()) {
-        // ...
+        $_SESSION['error_message'] = 'Lỗi: email đã tồn tại';
     } else {
-        $sql = "UPDATE accounts SET 
+        // Kiem tra co luong moi cap nhat
+        if ($acc_role === "employee") {
+            if (empty($salary)) {
+                $_SESSION['error_message'] = 'Lỗi: Vui lòng nhập lương';
+            } else {
+                $sql = "UPDATE accounts SET 
                 name=?, email=?, phone=?, address=?, role=?, position=?, salary=?, is_active=?
                 WHERE id=?";
 
-        $stmt = $pdo->prepare($sql);
-        if ($stmt->execute([$name, $email, $phone, $address, $acc_role, $position, $salary, $is_active, $acc_id])) {
-            // Cập nhật mật khẩu nếu có
-            if (!empty($_POST['new_password'])) {
-                $new_password = $_POST['new_password'];
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("UPDATE accounts SET password=? WHERE id=?");
-                $stmt->execute([$hashed_password, $acc_id]);
-            }
+                $stmt = $pdo->prepare($sql);
+                if ($stmt->execute([$name, $email, $phone, $address, $acc_role, $position, $salary, $is_active, $acc_id])) {
+                    // Cập nhật mật khẩu nếu có
+                    if (!empty($_POST['new_password'])) {
+                        $new_password = $_POST['new_password'];
+                        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                        $stmt = $pdo->prepare("UPDATE accounts SET password=? WHERE id=?");
+                        $stmt->execute([$hashed_password, $acc_id]);
+                    }
 
-            $_SESSION['success_message'] = 'Cập nhật tài khoản thành công!';
+                    $_SESSION['success_message'] = 'Cập nhật tài khoản thành công!';
+                } else {
+                    $_SESSION['error_message'] = 'Lỗi: ' . $pdo->error;
+                }
+            }
         } else {
-            $_SESSION['error_message'] = 'Lỗi: ' . $pdo->error;
+            $sql = "UPDATE accounts SET 
+                name=?, email=?, phone=?, address=?, role=?, salary=NULL, position=?, is_active=?
+                WHERE id=?";
+
+            $stmt = $pdo->prepare($sql);
+            if ($stmt->execute([$name, $email, $phone, $address, $acc_role, $position, $is_active, $acc_id])) {
+                // Cập nhật mật khẩu nếu có
+                if (!empty($_POST['new_password'])) {
+                    $new_password = $_POST['new_password'];
+                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("UPDATE accounts SET password=? WHERE id=?");
+                    $stmt->execute([$hashed_password, $acc_id]);
+                }
+
+                $_SESSION['success_message'] = 'Cập nhật tài khoản thành công!';
+            } else {
+                $_SESSION['error_message'] = 'Lỗi: ' . $pdo->error;
+            }
         }
     }
     header("Location: accounts.php");
@@ -282,7 +313,12 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                                             </span>
                                         </td>
                                         <td><?= htmlspecialchars($acc['position'] ?? '-') ?></td>
-                                        <td><?= number_format($acc['salary'] ?? 0) ?>đ</td>
+                                        <?php if ($acc['role'] == 'employee'): ?>
+                                            <td> <?= number_format($acc['salary'] ?? 0) ?>đ</td>
+                                        <?php else: ?>
+                                            <td>NULL</td>
+                                        <?php endif; ?>
+
                                         <td>
                                             <span class="badge <?= $acc['is_active'] ? 'bg-success' : 'bg-secondary' ?>">
                                                 <?= $acc['is_active'] ? 'Hoạt động' : 'Bị khóa' ?>
@@ -509,11 +545,11 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
         }
 
         // Auto dismiss alerts
-        setTimeout(() => {
-            document.querySelectorAll('.alert').forEach(alert => {
-                new bootstrap.Alert(alert).close();
-            });
-        }, 5000);
+        //setTimeout(() => {
+        //    document.querySelectorAll('.alert').forEach(alert => {
+        //        new bootstrap.Alert(alert).close();
+        //    });
+        //}, 5000);
 
         // Xử lý modal edit khi load trang
         <?php if ($edit_account): ?>

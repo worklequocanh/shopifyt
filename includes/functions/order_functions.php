@@ -14,10 +14,12 @@ function createOrderFromCart(PDO $pdo): int
         $cartStmt->execute([$accountId]);
         $cartJson = $cartStmt->fetchColumn();
 
+        // Lấy thông tin shipping
         $accountStmt = $pdo->prepare("SELECT name, phone, address FROM accounts WHERE id = ?");
         $accountStmt->execute([$accountId]);
         $shippingInfo = $accountStmt->fetch(PDO::FETCH_ASSOC);
 
+        // Kiểm tra giỏ hàng và thông tin giao hàng
         if (!$cartJson || empty(json_decode($cartJson, true))) {
             throw new Exception("Giỏ hàng của bạn đang trống.");
         }
@@ -33,7 +35,6 @@ function createOrderFromCart(PDO $pdo): int
         $productStmt = $pdo->prepare("SELECT id, name, price, stock FROM products WHERE id IN ($placeholders) FOR UPDATE");
         $productStmt->execute($productIds);
 
-        // SỬA LỖI: Dùng FETCH_UNIQUE | FETCH_ASSOC để lấy id làm key và giữ lại tất cả các cột
         $productsInDb = $productStmt->fetchAll(PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
 
         $totalAmount = 0;
@@ -58,7 +59,7 @@ function createOrderFromCart(PDO $pdo): int
 
         // 5. THÊM CHI TIẾT ĐƠN HÀNG VÀ CẬP NHẬT KHO
         $orderDetailStmt = $pdo->prepare(
-            "INSERT INTO order_details (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)"
+            "INSERT INTO order_details (order_id, product_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?, ?)"
         );
         // $updateStockStmt = $pdo->prepare(
         //     "UPDATE products SET stock = stock - ? WHERE id = ?"
@@ -66,7 +67,7 @@ function createOrderFromCart(PDO $pdo): int
 
         foreach ($cart as $productId => $quantity) {
             $product = $productsInDb[$productId];
-            $orderDetailStmt->execute([$orderId, $productId, $quantity, $product['price']]);
+            $orderDetailStmt->execute([$orderId, $productId, $product['name'], $quantity, $product['price']]);
             // $updateStockStmt->execute([$quantity, $productId]);
         }
 

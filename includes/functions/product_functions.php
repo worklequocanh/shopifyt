@@ -134,7 +134,7 @@ function getFeaturedProducts(PDO $pdo, int $limit = 4): array
                 p.is_featured = 1
                 AND p.is_active = 1
             ORDER BY
-                p.created_at DESC
+                p.updated_at DESC
             LIMIT ?";
 
     try {

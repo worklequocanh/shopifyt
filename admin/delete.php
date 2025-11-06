@@ -39,8 +39,23 @@ if (isset($_GET['delete'])) {
             if ($pdo->query("DELETE FROM products WHERE id=$id")) {
                 // 4. Xóa file ảnh vật lý
                 foreach ($image_files as $image_path) {
-                    if (file_exists($image_path)) {
-                        @unlink($image_path); // @ để tránh warning nếu file không tồn tại
+                    // Bỏ qua ảnh mặc định
+                    if ($image_path === "/assets/img/product-sale.png") {
+                        continue;
+                    }
+
+                    // Tạo đường dẫn tuyệt đối đến file
+                    $full_path = $_SERVER['DOCUMENT_ROOT'] . $image_path;
+
+                    // Kiểm tra và xóa file
+                    if (file_exists($full_path)) {
+                        if (@unlink($full_path)) {
+                            echo "Đã xóa: $image_path<br>";
+                        } else {
+                            echo "Không thể xóa: $image_path<br>";
+                        }
+                    } else {
+                        echo "File không tồn tại: $image_path<br>";
                     }
                 }
                 $message = "Xóa sản phẩm '$product_name' thành công!";
@@ -62,8 +77,9 @@ if (isset($_GET['delete'])) {
 
     header("Location: index.php");
     exit;
-}
+} else {
 
-// Nếu không có tham số delete, chuyển về admin
-header("Location: index.php");
-exit;
+    // Nếu không có tham số delete, chuyển về admin
+    header("Location: index.php");
+    exit;
+}

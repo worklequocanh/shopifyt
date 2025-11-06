@@ -93,7 +93,7 @@ if (isset($_POST['update_status'])) {
 if (isset($_POST['delete_order'])) {
     try {
         // Hoàn lại tồn kho nếu đơn đã shipped/completed
-        if (in_array($order['status'], ['shipped', 'accepted'])) {
+        if (in_array($order['status'], ['accepted'])) {
             $details_stmt->execute([$order_id]);
             $details = $details_stmt->fetchAll(PDO::FETCH_ASSOC);
 
