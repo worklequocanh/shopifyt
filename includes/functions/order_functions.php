@@ -1,84 +1,29 @@
 <?php
-
+// Hàm tạo đơn hàng từ giỏ hàng hiện tại
 function createOrderFromCart(PDO $pdo): int
 {
-    // CẢI THIỆN: Việc kiểm tra đăng nhập đã được chuyển ra ngoài file gọi hàm này.
     $accountId = $_SESSION['id'];
 
     try {
-        // 1. BẮT ĐẦU TRANSACTION
         $pdo->beginTransaction();
 
-        // 2. LẤY GIỎ HÀNG VÀ THÔNG TIN KHÁCH HÀNG
-        $cartStmt = $pdo->prepare("SELECT cart_data FROM user_carts WHERE account_id = ?");
-        $cartStmt->execute([$accountId]);
-        $cartJson = $cartStmt->fetchColumn();
+        // Lấy thông tin giỏ hàng và tài khoản
+        $cart = getCartData($pdo, $accountId);
+        $shippingInfo = getShippingInfo($pdo, $accountId);
 
-        // Lấy thông tin shipping
-        $accountStmt = $pdo->prepare("SELECT name, phone, address FROM accounts WHERE id = ?");
-        $accountStmt->execute([$accountId]);
-        $shippingInfo = $accountStmt->fetch(PDO::FETCH_ASSOC);
+        validateOrderData($cart, $shippingInfo);
 
-        // Kiểm tra giỏ hàng và thông tin giao hàng
-        if (!$cartJson || empty(json_decode($cartJson, true))) {
-            throw new Exception("Giỏ hàng của bạn đang trống.");
-        }
-        if (empty($shippingInfo['phone']) || empty($shippingInfo['address'])) {
-            throw new Exception("Vui lòng cập nhật đầy đủ thông tin giao hàng trước khi đặt hàng.");
-        }
-        $cart = json_decode($cartJson, true);
+        // Xử lý đơn hàng
+        $products = getProductsInfo($pdo, array_keys($cart));
+        $totalAmount = calculateTotalAmount($cart, $products);
 
-        // 3. KIỂM TRA TỒN KHO, TÍNH TỔNG TIỀN
-        $productIds = array_keys($cart);
-        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+        $orderId = createOrder($pdo, $accountId, $shippingInfo, $totalAmount);
+        createOrderDetails($pdo, $orderId, $cart, $products);
 
-        $productStmt = $pdo->prepare("SELECT id, name, price, stock FROM products WHERE id IN ($placeholders) FOR UPDATE");
-        $productStmt->execute($productIds);
+        clearCart($pdo, $accountId);
 
-        $productsInDb = $productStmt->fetchAll(PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
-
-        $totalAmount = 0;
-        foreach ($cart as $productId => $quantity) {
-            if (!isset($productsInDb[$productId])) {
-                throw new Exception("Sản phẩm với ID {$productId} không tồn tại hoặc đã bị xóa.");
-            }
-            $product = $productsInDb[$productId];
-            if ($quantity > $product['stock']) {
-                throw new Exception("Sản phẩm '" . htmlspecialchars($product['name']) . "' không đủ số lượng tồn kho (chỉ còn " . $product['stock'] . ").");
-            }
-            $totalAmount += $product['price'] * $quantity;
-        }
-
-        // 4. TẠO ĐƠN HÀNG MỚI
-        $orderStmt = $pdo->prepare(
-            "INSERT INTO orders (account_id, customer_name, shipping_address, shipping_phone, total_amount) 
-             VALUES (?, ?, ?, ?, ?)"
-        );
-        $orderStmt->execute([$accountId, $shippingInfo['name'], $shippingInfo['address'], $shippingInfo['phone'], $totalAmount]);
-        $orderId = $pdo->lastInsertId();
-
-        // 5. THÊM CHI TIẾT ĐƠN HÀNG VÀ CẬP NHẬT KHO
-        $orderDetailStmt = $pdo->prepare(
-            "INSERT INTO order_details (order_id, product_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?, ?)"
-        );
-        // $updateStockStmt = $pdo->prepare(
-        //     "UPDATE products SET stock = stock - ? WHERE id = ?"
-        // );
-
-        foreach ($cart as $productId => $quantity) {
-            $product = $productsInDb[$productId];
-            $orderDetailStmt->execute([$orderId, $productId, $product['name'], $quantity, $product['price']]);
-            // $updateStockStmt->execute([$quantity, $productId]);
-        }
-
-        // 6. LÀM RỖNG GIỎ HÀNG
-        $deleteCartStmt = $pdo->prepare("DELETE FROM user_carts WHERE account_id = ?");
-        $deleteCartStmt->execute([$accountId]);
-
-        // 7. COMMIT TRANSACTION
         $pdo->commit();
-
-        return (int)$orderId;
+        return $orderId;
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -87,7 +32,106 @@ function createOrderFromCart(PDO $pdo): int
     }
 }
 
+// Hàm lấy giỏ hàng của người dùng
+function getCartData(PDO $pdo, int $accountId): array
+{
+    $stmt = $pdo->prepare("SELECT cart_data FROM user_carts WHERE account_id = ?");
+    $stmt->execute([$accountId]);
+    $cartJson = $stmt->fetchColumn();
 
+    return $cartJson ? json_decode($cartJson, true) : [];
+}
+
+// Hàm lấy thông tin giao hàng của người dùng
+function getShippingInfo(PDO $pdo, int $accountId): array
+{
+    $stmt = $pdo->prepare("SELECT name, phone, address FROM accounts WHERE id = ?");
+    $stmt->execute([$accountId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+}
+
+// Hàm xác thực dữ liệu đơn hàng
+function validateOrderData(array $cart, array $shippingInfo): void
+{
+    if (empty($cart)) {
+        throw new Exception("Giỏ hàng của bạn đang trống.");
+    }
+    if (empty($shippingInfo['phone']) || empty($shippingInfo['address'])) {
+        throw new Exception("Vui lòng cập nhật đầy đủ thông tin giao hàng trước khi đặt hàng.");
+    }
+}
+
+// Hàm lấy thông tin sản phẩm từ database
+function getProductsInfo(PDO $pdo, array $productIds): array
+{
+    if (empty($productIds)) return [];
+
+    $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+    $stmt = $pdo->prepare("SELECT id, name, price, stock FROM products WHERE id IN ($placeholders) FOR UPDATE");
+    $stmt->execute($productIds);
+
+    return $stmt->fetchAll(PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
+}
+
+// Hàm tính tổng tiền đơn hàng
+function calculateTotalAmount(array $cart, array $products): float
+{
+    $total = 0;
+    foreach ($cart as $productId => $quantity) {
+        if (!isset($products[$productId])) {
+            throw new Exception("Sản phẩm với ID {$productId} không tồn tại hoặc đã bị xóa.");
+        }
+
+        $product = $products[$productId];
+        if ($quantity > $product['stock']) {
+            throw new Exception("Sản phẩm '" . htmlspecialchars($product['name']) . "' không đủ số lượng tồn kho (chỉ còn " . $product['stock'] . ").");
+        }
+
+        $total += $product['price'] * $quantity;
+    }
+    return $total;
+}
+
+// Hàm tạo đơn hàng
+function createOrder(PDO $pdo, int $accountId, array $shippingInfo, float $totalAmount): int
+{
+    $stmt = $pdo->prepare(
+        "INSERT INTO orders (account_id, customer_name, shipping_address, shipping_phone, total_amount) 
+         VALUES (?, ?, ?, ?, ?)"
+    );
+    $stmt->execute([
+        $accountId,
+        $shippingInfo['name'],
+        $shippingInfo['address'],
+        $shippingInfo['phone'],
+        $totalAmount
+    ]);
+
+    return (int)$pdo->lastInsertId();
+}
+
+// Hàm tạo chi tiết đơn hàng
+function createOrderDetails(PDO $pdo, int $orderId, array $cart, array $products): void
+{
+    $stmt = $pdo->prepare(
+        "INSERT INTO order_details (order_id, product_id, product_name, quantity, unit_price) 
+         VALUES (?, ?, ?, ?, ?)"
+    );
+
+    foreach ($cart as $productId => $quantity) {
+        $product = $products[$productId];
+        $stmt->execute([$orderId, $productId, $product['name'], $quantity, $product['price']]);
+    }
+}
+
+// Hàm làm rỗng giỏ hàng của người dùng
+function clearCart(PDO $pdo, int $accountId): void
+{
+    $stmt = $pdo->prepare("DELETE FROM user_carts WHERE account_id = ?");
+    $stmt->execute([$accountId]);
+}
+
+// Hàm lấy thông tin tóm tắt đơn hàng để hiển thị trên trang thành công
 function getOrderSummary(PDO $pdo, int $orderId): ?array
 {
     $accountId = $_SESSION['id'];
