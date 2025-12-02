@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch((error) => {
           // Bây giờ khối catch sẽ bắt cả lỗi mạng và lỗi từ server
           console.error('Lỗi Fetch:', error);
-          showFlashMessage('Có lỗi xảy ra, vui lòng thử lại.', 'error');
+          showFlashMessage('Có lỗi xảy ra, vui lòng thử lại.', error);
         });
     });
   }

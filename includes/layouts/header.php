@@ -14,7 +14,7 @@
         <li><a href="products.php"
             class="<?php $page_title === 'Sản phẩm' ? 'text-gray-900' : 'text-gray-600' ?> hover:text-blue-600 transition-colors">Sản
             phẩm</a></li>
-        <li><a href="#"
+        <li><a href="about-us.php"
             class="<?php $page_title === 'Về chúng tôi' ? 'text-gray-900' : 'text-gray-600' ?> hover:text-blue-600 transition-colors">Về
             chúng tôi</a></li>
       </ul>
@@ -72,11 +72,11 @@
 
     <div x-show="mobileMenuOpen" @click.away="mobileMenuOpen = false" class="lg:hidden mt-4 border-t pt-4">
       <a href="index.php"
-        class="block px-4 py-2 rounded-md <?php $page_title === 'Trang chủ' ? 'text-gray-900' : 'text-gray-600' ?>  hover:bg-gray-100">Trang
-        chủ</a>
+        class="block px-4 py-2 rounded-md <?php $page_title === 'Trang chủ' ? 'text-gray-900' : 'text-gray-600' ?>  hover:bg-gray-100">Trang chủ</a>
       <a href="products.php"
-        class="block px-4 py-2 rounded-md <?php $page_title === 'Sản phẩm' ? 'text-gray-900' : 'text-gray-600' ?>  hover:bg-gray-100">Sản
-        phẩm</a>
+        class="block px-4 py-2 rounded-md <?php $page_title === 'Sản phẩm' ? 'text-gray-900' : 'text-gray-600' ?>  hover:bg-gray-100">Sản phẩm</a>
+      <a href="about-us.php"
+        class="block px-4 py-2 rounded-md <?php $page_title === 'Về chúng tôi' ? 'text-gray-900' : 'text-gray-600' ?>  hover:bg-gray-100">Về chúng tôi</a>
 
       <div class="border-t mt-4 pt-4 space-y-2">
         <?php if ($logined): ?>

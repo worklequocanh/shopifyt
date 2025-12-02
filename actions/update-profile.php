@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/functions/auth_functions.php';
 require_once __DIR__ . '/../includes/functions/functions.php';
 require_once __DIR__ . '/../includes/functions/account_functions.php';
 
-restrictToRoles('customer');
+restrictToRoles($pdo, 'customer');
 
 header('Content-Type: application/json');
 

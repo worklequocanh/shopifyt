@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../includes/functions/auth_functions.php";
 require_once __DIR__ . "/../includes/functions/admin_functions.php";
 
-restrictToRoles(['admin']);
+restrictToRoles($pdo, ['admin']);
 
 $role = $_SESSION['role'] ?? "admin";
 $account_id = $_SESSION['id'] ?? 1;
@@ -461,31 +461,35 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                                     <input type="text" name="phone" class="form-control"
                                         value="<?= htmlspecialchars($edit_account['phone'] ?? '') ?>">
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Vai trò <span class="text-danger">*</span></label>
-                                    <select name="role" class="form-select" required onchange="toggleEmployeeFields(this, 'edit')">
-                                        <option value="customer" <?= $edit_account['role'] == 'customer' ? 'selected' : '' ?>>Khách hàng</option>
-                                        <option value="employee" <?= $edit_account['role'] == 'employee' ? 'selected' : '' ?>>Nhân viên</option>
-                                        <option value="admin" <?= $edit_account['role'] == 'admin' ? 'selected' : '' ?>>Admin</option>
-                                    </select>
-                                </div>
+                                <?php if ($edit_account['id'] != $account_id): ?>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Vai trò <span class="text-danger">*</span></label>
+                                        <select name="role" class="form-select" required onchange="toggleEmployeeFields(this, 'edit')">
+                                            <option value="customer" <?= $edit_account['role'] == 'customer' ? 'selected' : '' ?>>Khách hàng</option>
+                                            <option value="employee" <?= $edit_account['role'] == 'employee' ? 'selected' : '' ?>>Nhân viên</option>
+                                            <option value="admin" <?= $edit_account['role'] == 'admin' ? 'selected' : '' ?>>Admin</option>
+                                        </select>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Địa chỉ</label>
                                 <textarea name="address" class="form-control" rows="2"><?= htmlspecialchars($edit_account['address'] ?? '') ?></textarea>
                             </div>
-                            <div class="row employee-field-edit" style="<?= in_array($edit_account['role'], ['admin', 'employee']) ? '' : 'display:none;' ?>">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Chức vụ</label>
-                                    <input type="text" name="position" class="form-control"
-                                        value="<?= htmlspecialchars($edit_account['position'] ?? '') ?>">
+                            <?php if ($edit_account['id'] != $account_id): ?>
+                                <div class="row employee-field-edit" style="<?= in_array($edit_account['role'], ['admin', 'employee']) ? '' : 'display:none;' ?>">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Chức vụ</label>
+                                        <input type="text" name="position" class="form-control"
+                                            value="<?= htmlspecialchars($edit_account['position'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Lương</label>
+                                        <input type="number" name="salary" class="form-control"
+                                            value="<?= $edit_account['salary'] ?? 0 ?>" step="100000">
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Lương</label>
-                                    <input type="number" name="salary" class="form-control"
-                                        value="<?= $edit_account['salary'] ?? 0 ?>" step="100000">
-                                </div>
-                            </div>
+                            <?php endif; ?>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Mật khẩu mới <small class="text-muted">(Để trống nếu không đổi)</small></label>

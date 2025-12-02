@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../includes/functions/auth_functions.php";
 require_once __DIR__ . "/../includes/functions/admin_functions.php";
 
-restrictToRoles(['admin']);
+restrictToRoles($pdo, ['admin']);
 
 $role = $_SESSION['role'] ?? "admin";
 $account_id = $_SESSION['id'] ?? 1;

@@ -5,7 +5,7 @@ require_once __DIR__ . '/includes/functions/cart_functions.php';
 require_once __DIR__ . '/includes/functions/account_functions.php';
 require_once __DIR__ . '/includes/functions/order_functions.php';
 
-restrictToRoles('customer');
+restrictToRoles($pdo, 'customer');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $accountId = $_SESSION['id'];

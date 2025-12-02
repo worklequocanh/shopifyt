@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/cart_functions.php';
+
 // Hàm tạo đơn hàng từ giỏ hàng hiện tại
 function createOrderFromCart(PDO $pdo): int
 {
@@ -8,7 +10,7 @@ function createOrderFromCart(PDO $pdo): int
         $pdo->beginTransaction();
 
         // Lấy thông tin giỏ hàng và tài khoản
-        $cart = getCartData($pdo, $accountId);
+        $cart = getCart($pdo);
         $shippingInfo = getShippingInfo($pdo, $accountId);
 
         validateOrderData($cart, $shippingInfo);
@@ -33,14 +35,14 @@ function createOrderFromCart(PDO $pdo): int
 }
 
 // Hàm lấy giỏ hàng của người dùng
-function getCartData(PDO $pdo, int $accountId): array
-{
-    $stmt = $pdo->prepare("SELECT cart_data FROM user_carts WHERE account_id = ?");
-    $stmt->execute([$accountId]);
-    $cartJson = $stmt->fetchColumn();
+// function getCart(PDO $pdo, int $accountId): array
+// {
+//     $stmt = $pdo->prepare("SELECT cart_data FROM user_carts WHERE account_id = ?");
+//     $stmt->execute([$accountId]);
+//     $cartJson = $stmt->fetchColumn();
 
-    return $cartJson ? json_decode($cartJson, true) : [];
-}
+//     return $cartJson ? json_decode($cartJson, true) : [];
+// }
 
 // Hàm lấy thông tin giao hàng của người dùng
 function getShippingInfo(PDO $pdo, int $accountId): array

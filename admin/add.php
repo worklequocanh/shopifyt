@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../includes/functions/auth_functions.php";
 require_once __DIR__ . "/../includes/functions/admin_functions.php";
 
-restrictToRoles(['admin']);
+restrictToRoles($pdo, ['admin']);
 
 $role = $_SESSION['role'] ?? "admin";
 $account_id = $_SESSION['id'] ?? 1;
@@ -52,7 +52,7 @@ if (isset($_POST['add'])) {
         $_SESSION['error_message'] = 'Lỗi thêm sản phẩm: ' . $pdo->error;
     }
 
-    header("Location: /admin/index.php");
+    header("Location: /admin/product-list.php");
     exit;
 }
 ?>
@@ -123,7 +123,7 @@ if (isset($_POST['add'])) {
                         <button type="submit" name="add" class="btn btn-success">
                             <i class="bi bi-plus-circle"></i> Thêm sản phẩm
                         </button>
-                        <a href="index.php" class="btn btn-secondary">
+                        <a href="product-list.php" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Quay lại
                         </a>
                     </div>

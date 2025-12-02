@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../includes/functions/auth_functions.php";
 require_once __DIR__ . "/../includes/functions/admin_functions.php";
 
-restrictToRoles(['admin', 'employee']);
+restrictToRoles($pdo, ['admin', 'employee']);
 
 $role = $_SESSION['role'];
 $account_id = $_SESSION['id'];
@@ -185,9 +185,9 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
             </div>
         </div>
 
-        <!-- Báo cáo cho Admin -->
-        <?php if ($role === 'admin'): ?>
-            <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4">
+            <!-- Báo cáo cho Admin -->
+            <?php if ($role === 'admin'): ?>
                 <div class="col-md-3">
                     <a href="doanhthu.php" class="text-decoration-none">
                         <div class="card report-card" style="border-color: #28a745;">
@@ -214,7 +214,7 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                     <a href="categories.php" class="text-decoration-none">
                         <div class="card report-card" style="border-color:rgb(242, 131, 13);">
                             <div class="card-body text-center">
-                                <i class="bi bi-box text-warning" style="font-size: 3rem;"></i>
+                                <i class="bi bi-box text-secondary" style="font-size: 3rem;"></i>
                                 <h5 class="mt-3">Quản lý danh mục</h5>
                                 <p class="text-muted mb-0">Xem chi tiết danh mục sản phẩm</p>
                             </div>
@@ -232,160 +232,36 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                         </div>
                     </a>
                 </div>
-            </div>
-        <?php endif; ?>
-
-        <!-- Danh sách sản phẩm -->
-        <?php if ($role === 'admin' || $role === 'employee'): ?>
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-box-seam"></i> Danh sách sản phẩm</h5>
-
-                    <?php if ($role === 'admin'): ?>
-                        <a href="add.php" class="btn bg-success">
-                            <i class="bi bi-plus-circle"></i> Thêm sản phẩm
-                        </a>
-                    <?php endif; ?>
-
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Hình</th>
-                                    <th>Tên sản phẩm</th>
-                                    <th>Danh mục</th>
-                                    <th>Giá (VNĐ)</th>
-                                    <th>Tồn kho</th>
-                                    <th>Trạng thái</th>
-                                    <th>Ngày tạo</th>
-                                    <?php if ($role === 'admin'): ?>
-                                        <th>Hành động</th>
-                                    <?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                if ($result):
-                                    $products = $result->fetchAll(PDO::FETCH_ASSOC);
-                                    if (!empty($products)):
-                                        foreach ($products as $row):
-                                ?>
-                                            <tr>
-                                                <td><?= $row['id'] ?></td>
-                                                <td>
-                                                    <img src="<?= htmlspecialchars(getProductImage($pdo, $row['id'])) ?>"
-                                                        alt="<?= htmlspecialchars($row['name']) ?>"
-                                                        class="product-img">
-                                                </td>
-                                                <td><?= htmlspecialchars($row['name']) ?></td>
-                                                <td><span class="badge bg-secondary"><?= htmlspecialchars($row['category_name'] ?? 'Chưa phân loại') ?></span></td>
-                                                <td class="fw-bold text-success"><?= number_format($row['price']) ?>đ</td>
-                                                <td>
-                                                    <span class="badge <?= $row['stock'] > 0 ? 'bg-success' : 'bg-danger' ?>">
-                                                        <?= $row['stock'] ?>
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span class="badge <?= $row['is_active'] ? 'bg-success' : 'bg-secondary' ?>">
-                                                        <?= $row['is_active'] ? 'Đang bán' : 'Ngừng bán' ?>
-                                                    </span>
-                                                </td>
-                                                <td><?= date('d/m/Y', strtotime($row['created_at'])) ?></td>
-                                                <?php if ($role === 'admin'): ?>
-                                                    <td>
-                                                        <a href="update.php?id=<?= $row['id'] ?>"
-                                                            class="btn btn-sm btn-warning" title="Sửa">
-                                                            <i class="bi bi-pencil"></i>
-                                                        </a>
-                                                        <a href="delete.php?delete=<?= $row['id'] ?>"
-                                                            class="btn btn-sm btn-danger"
-                                                            onclick="return confirm('Xóa sản phẩm này?')" title="Xóa">
-                                                            <i class="bi bi-trash"></i>
-                                                        </a>
-                                                    </td>
-                                                <?php endif; ?>
-                                            </tr>
-                                        <?php
-                                        endforeach;
-                                    else:
-                                        ?>
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted">Chưa có sản phẩm nào</td>
-                                        </tr>
-                                <?php
-                                    endif;
-                                endif;
-                                ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <!-- Đơn hàng cần xử lý -->
-        <?php if ($role === 'admin' || $role === 'employee'): ?>
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="bi bi-cart-check"></i> Đơn hàng cần xử lý</h5>
-                </div>
-                <div class="card-body">
-                    <?php
-                    if ($order_result):
-                        $orders = $order_result->fetchAll(PDO::FETCH_ASSOC);
-                        if (!empty($orders)):
-                    ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Khách hàng</th>
-                                            <th>Tổng tiền</th>
-                                            <th>Trạng thái</th>
-                                            <th>Ngày đặt</th>
-                                            <th>Hành động</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($orders as $order): ?>
-                                            <tr>
-                                                <td>#<?= $order['id'] ?></td>
-                                                <td><?= htmlspecialchars($order['customer_name'] ?? 'N/A') ?></td>
-                                                <td class="fw-bold text-success"><?= number_format($order['total_amount']) ?>đ</td>
-                                                <td><span class="badge
-                                                    <?php if ($order['status'] === 'accepted') {
-                                                        echo htmlspecialchars("bg-success");
-                                                    } elseif ($order['status'] === 'pending') {
-                                                        echo htmlspecialchars("bg-warning");
-                                                    } else {
-                                                        echo htmlspecialchars("bg-danger");
-                                                    } ?>">
-                                                        <?= $order['status'] ?></span></td>
-                                                <td><?= date('d/m/Y H:i', strtotime($order['order_date'])) ?></td>
-                                                <td>
-                                                    <a href="edit.php?id=<?= $order['id'] ?>"
-                                                        class="btn btn-sm btn-primary">
-                                                        <i class="bi bi-eye"></i> Chi tiết
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+            <?php endif; ?>
+            <?php if ($role === 'admin' || $role === 'employee'): ?>
+                <div class=" col-md-3">
+                    <a href="product-list.php" class="text-decoration-none">
+                        <div class="card report-card" style="border-color:rgba(204, 31, 74, 1);">
+                            <div class="card-body text-center">
+                                <i class="bi bi-archive text-danger" style="font-size: 3rem;"></i>
+                                <h5 class="mt-3">Danh Sách Sản Phẩm</h5>
+                                <p class="text-muted mb-0">Xem chi tiết list sản phẩm</p>
                             </div>
-                        <?php else: ?>
-                            <p class="text-muted text-center mb-0">Không có đơn hàng cần xử lý</p>
-                    <?php
-                        endif;
-                    endif;
-                    ?>
+                        </div>
+                    </a>
                 </div>
-            </div>
-        <?php endif; ?>
+                <div class="col-md-3">
+                    <a href="order-list.php" class="text-decoration-none">
+                        <div class="card report-card" style="border-color:rgba(230, 29, 179, 1);">
+                            <div class="card-body text-center">
+                                <i class="bi bi-cart text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="mt-3">Xử Lý Đơn Hàng</h5>
+                                <p class="text-muted mb-0">Xem xem chi tiết list đơn hàng</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+            <?php endif; ?>
+        </div>
+
+
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>

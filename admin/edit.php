@@ -2,7 +2,7 @@
 require_once __DIR__ . "/../includes/functions/auth_functions.php";
 require_once __DIR__ . "/../includes/functions/admin_functions.php";
 
-restrictToRoles(['admin', 'employee']);
+restrictToRoles($pdo, ['admin', 'employee']);
 
 $role = $_SESSION['role'];
 $account_id = $_SESSION['id'];
@@ -12,7 +12,7 @@ $order_id = intval($_GET['id'] ?? 0);
 
 if ($order_id <= 0) {
     $_SESSION['error_message'] = 'Đơn hàng không hợp lệ!';
-    header("Location: index.php");
+    header("Location: .php");
     exit;
 }
 
@@ -27,13 +27,13 @@ try {
 
     if (!$order) {
         $_SESSION['error_message'] = 'Đơn hàng không tồn tại!';
-        header("Location: index.php");
+        header("Location: order-list.php");
         exit;
     }
 } catch (PDOException $e) {
     error_log("Error fetching order: " . $e->getMessage());
     $_SESSION['error_message'] = 'Lỗi tải thông tin đơn hàng!';
-    header("Location: index.php");
+    header("Location: order-list.php");
     exit;
 }
 
@@ -60,14 +60,6 @@ if (isset($_POST['update_status'])) {
             // Lấy lại chi tiết đơn hàng
             $details_stmt->execute([$order_id]);
             $details = $details_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Giảm tồn kho khi chuyển sang shipped/completed
-            if (($new_status == 'accepted') && $order['status'] == 'pending') {
-                $stock_stmt = $pdo->prepare("UPDATE products SET stock = stock - ? WHERE id = ?");
-                foreach ($details as $detail) {
-                    $stock_stmt->execute([$detail['quantity'], $detail['product_id']]);
-                }
-            }
 
             // Hoàn lại tồn kho khi hủy đơn đã shipped/completed
             if ($new_status == 'cancelled' && in_array($order['status'], ['shipped', 'accepted'])) {
@@ -107,7 +99,7 @@ if (isset($_POST['delete_order'])) {
         $delete_stmt = $pdo->prepare("DELETE FROM orders WHERE id = ?");
         if ($delete_stmt->execute([$order_id])) {
             $_SESSION['success_message'] = 'Xóa đơn hàng thành công!';
-            header("Location: index.php");
+            header("Location: order-list.php");
             exit;
         } else {
             $_SESSION['error_message'] = 'Lỗi xóa đơn hàng!';
@@ -154,7 +146,7 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><i class="bi bi-cart-check-fill"></i> Xử lý đơn hàng #<?= $order_id ?></h2>
-            <a href="index.php" class="btn btn-secondary">
+            <a href="order-list.php" class="btn btn-secondary">
                 <i class="bi bi-arrow-left"></i> Quay lại
             </a>
         </div>

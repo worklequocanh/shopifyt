@@ -24,7 +24,7 @@ try {
 }
 
 redirectIfLoggedIn();
-restrictToRoles("customer", "/admin/index.php");
+restrictToRoles($pdo, "customer", "/admin/index.php");
 
 $logined = isLoggedIn();
 

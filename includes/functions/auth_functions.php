@@ -104,14 +104,14 @@ function redirectIfLoggedIn()
   }
 }
 
-function restrictToRoles($allowedRoles, $redirectIfNotLoggedIn = '/login.php')
+function restrictToRoles($pdo, $allowedRoles, $redirectIfNotLoggedIn = '/login.php')
 {
   if (!isLoggedIn()) {
     header("Location: $redirectIfNotLoggedIn");
     exit();
   }
 
-  $currentRole = $_SESSION['role'];
+  $currentRole = getCurrentRole($pdo);
 
   if (!in_array($currentRole, ['admin', 'employee', 'customer'])) {
     session_unset();
@@ -134,4 +134,21 @@ function restrictToRoles($allowedRoles, $redirectIfNotLoggedIn = '/login.php')
       }
     }
   }
+}
+
+function getCurrentRole($pdo)
+{
+  $accountId = $_SESSION['id'] ?? null;
+  if (!$accountId) {
+    return null;
+  }
+  $role = null;
+
+  $sql = "SELECT role FROM accounts WHERE id = :id";
+  $stmt = $pdo->prepare($sql);
+  $stmt->bindParam(':id', $accountId, PDO::PARAM_INT);
+  $stmt->execute();
+
+  $result = $stmt->fetch(PDO::FETCH_ASSOC);
+  return $result ? $result['role'] : null;
 }

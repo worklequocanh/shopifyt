@@ -5,7 +5,7 @@ require_once __DIR__ . '/includes/functions/functions.php';
 require_once __DIR__ . '/includes/functions/product_functions.php';
 require_once __DIR__ . '/includes/functions/cart_functions.php';
 
-restrictToRoles('customer');
+restrictToRoles($pdo, 'customer');
 
 $page_title = 'Giỏ hàng của bạn';
 

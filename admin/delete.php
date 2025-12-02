@@ -3,7 +3,7 @@ require_once __DIR__ . "/../includes/functions/auth_functions.php";
 require_once __DIR__ . "/../includes/functions/admin_functions.php";
 
 // Chỉ admin mới được xóa sản phẩm
-restrictToRoles(['admin']);
+restrictToRoles($pdo, ['admin']);
 
 $role = $_SESSION['role'] ?? "admin";
 $account_id = $_SESSION['id'] ?? 1;
@@ -75,11 +75,11 @@ if (isset($_GET['delete'])) {
         $_SESSION['error_message'] = 'Không tìm thấy sản phẩm!';
     }
 
-    header("Location: index.php");
+    header("Location: product-list.php");
     exit;
 } else {
 
     // Nếu không có tham số delete, chuyển về admin
-    header("Location: index.php");
+    header("Location: product-list.php");
     exit;
 }
