@@ -25,6 +25,7 @@ if ($config['debug']) {
 // Load core classes
 require_once __DIR__ . '/../app/Core/Database.php';
 require_once __DIR__ . '/../app/Core/Router.php';
+require_once __DIR__ . '/../app/Core/Permission.php';
 require_once __DIR__ . '/../app/Core/helpers.php';
 require_once __DIR__ . '/../app/Controllers/BaseController.php';
 require_once __DIR__ . '/../app/Models/BaseModel.php';
@@ -56,7 +57,7 @@ $router->add('/cart/add', 'Cart', 'add');
 $router->add('/cart/update', 'Cart', 'update');
 $router->add('/cart/remove', 'Cart', 'remove');
 
-// Account
+// Account routes (customer)
 $router->add('/account', 'Account', 'info');
 $router->add('/account/info', 'Account', 'info');
 $router->add('/account/password', 'Account', 'password');
@@ -68,6 +69,47 @@ $router->add('/account/change-password', 'Account', 'changePassword');
 $router->add('/checkout', 'Order', 'checkout');
 $router->add('/checkout/success', 'Order', 'success');
 $router->add('/order/detail/:id', 'Order', 'detail');
+
+// Admin routes
+$router->add('/admin', 'Admin\\Admin', 'index');
+$router->add('/admin/dashboard', 'Admin\\Admin', 'index');
+
+// Admin Products
+$router->add('/admin/products', 'Admin\\AdminProduct', 'index');
+$router->add('/admin/products/create', 'Admin\\AdminProduct', 'create');
+$router->add('/admin/products/edit/:id', 'Admin\\AdminProduct', 'edit');
+$router->add('/admin/products/delete/:id', 'Admin\\AdminProduct', 'delete');
+$router->add('/admin/products/toggle/:id', 'Admin\\AdminProduct', 'toggleStatus');
+$router->add('/admin/products/delete-image/:id', 'Admin\\AdminProduct', 'deleteImage');
+$router->add('/admin/products/set-main-image/:id', 'Admin\\AdminProduct', 'setMainImage');
+
+// Admin Order Routes
+$router->add('/admin/orders', 'Admin\\AdminOrder', 'index');
+$router->add('/admin/orders/detail/:id', 'Admin\\AdminOrder', 'detail');
+$router->add('/admin/orders/update-status', 'Admin\\AdminOrder', 'updateStatus');
+
+// Admin Category Routes
+$router->add('/admin/categories', 'Admin\\AdminCategory', 'index');
+$router->add('/admin/categories/store', 'Admin\\AdminCategory', 'store');
+$router->add('/admin/categories/update', 'Admin\\AdminCategory', 'update');
+$router->add('/admin/categories/delete/:id', 'Admin\\AdminCategory', 'delete');
+
+// Admin Account Routes
+$router->add('/admin/accounts', 'Admin\\AdminAccount', 'index');
+$router->add('/admin/accounts/store', 'Admin\\AdminAccount', 'store');
+$router->add('/admin/accounts/update', 'Admin\\AdminAccount', 'update');
+$router->add('/admin/accounts/delete/:id', 'Admin\\AdminAccount', 'delete');
+$router->add('/admin/accounts/toggle/:id', 'Admin\\AdminAccount', 'toggleActive');
+
+// Admin Report Routes
+$router->add('/admin/reports/revenue', 'Admin\\AdminReport', 'revenue');
+$router->add('/admin/reports/stats', 'Admin\\AdminReport', 'stats');
+
+// Admin Voucher Routes
+$router->add('/admin/vouchers', 'Admin\\AdminVoucher', 'index');
+$router->add('/admin/vouchers/store', 'Admin\\AdminVoucher', 'store');
+$router->add('/admin/vouchers/update', 'Admin\\AdminVoucher', 'update');
+$router->add('/admin/vouchers/delete/:id', 'Admin\\AdminVoucher', 'delete');
 
 // Dispatch the request
 $router->dispatch();

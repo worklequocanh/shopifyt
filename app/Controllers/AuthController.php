@@ -26,7 +26,7 @@ class AuthController extends BaseController
         if (isLoggedIn()) {
             $role = getCurrentUserRole();
             if ($role === 'admin' || $role === 'employee') {
-                $this->redirect('/admin/index.php');
+                $this->redirect('/admin/dashboard');
             } else {
                 $this->redirect('/');
             }
@@ -62,7 +62,7 @@ class AuthController extends BaseController
         if (isLoggedIn()) {
             $role = getCurrentUserRole();
             if ($role === 'admin' || $role === 'employee') {
-                $this->redirect('/admin/index.php');
+                $this->redirect('/admin/dashboard');
             } else {
                 $this->redirect('/');
             }

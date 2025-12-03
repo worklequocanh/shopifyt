@@ -13,7 +13,10 @@ class Product extends BaseModel
     /**
      * Get all products with pagination
      */
-    public function getAll(int $limit = 12, int $offset = 0, ?int $categoryId = null): array
+    /**
+     * Get all products with pagination
+     */
+    public function getAll(int $limit = 12, int $offset = 0, ?int $categoryId = null, ?int $status = 1): array
     {
         $sql = "SELECT 
                     p.*, 
@@ -25,44 +28,62 @@ class Product extends BaseModel
                     product_images AS pi ON p.id = pi.product_id AND pi.is_main = TRUE
                 LEFT JOIN
                     categories AS c ON p.category_id = c.id
-                WHERE 
-                    p.is_active = TRUE";
+                WHERE 1=1";
         
+        $params = [];
+
+        if ($status !== null) {
+            $sql .= " AND p.is_active = ?";
+            $params[] = $status;
+        }
+
         if ($categoryId) {
-            $sql .= " AND p.category_id = :categoryId";
+            $sql .= " AND p.category_id = ?";
+            $params[] = $categoryId;
         }
         
-        $sql .= " ORDER BY p.created_at DESC LIMIT :limit OFFSET :offset";
+        $sql .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        
-        if ($categoryId) {
-            $stmt->bindValue(':categoryId', $categoryId, PDO::PARAM_INT);
-        }
-        
-        $stmt->execute();
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
     /**
      * Count all active products
      */
-    public function countAll(?int $categoryId = null): int
+    /**
+     * Count all products
+     */
+    public function countAll(?int $categoryId = null, ?int $status = 1): int
     {
-        $sql = "SELECT COUNT(id) FROM products WHERE is_active = 1";
+        $sql = "SELECT COUNT(id) FROM products WHERE 1=1";
+        $params = [];
         
+        if ($status !== null) {
+            $sql .= " AND is_active = ?";
+            $params[] = $status;
+        }
+
         if ($categoryId) {
-            $sql .= " AND category_id = :categoryId";
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->bindValue(':categoryId', $categoryId, PDO::PARAM_INT);
-            $stmt->execute();
-        } else {
-            $stmt = $this->pdo->query($sql);
+            $sql .= " AND category_id = ?";
+            $params[] = $categoryId;
         }
         
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        
         return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Count products by category
+     */
+    public function countByCategory(int $categoryId): int
+    {
+        return $this->countAll($categoryId);
     }
 
     /**
@@ -96,7 +117,7 @@ class Product extends BaseModel
      */
     public function getProductImages(int $productId): array
     {
-        $stmt = $this->pdo->prepare("SELECT image_url, is_main 
+        $stmt = $this->pdo->prepare("SELECT id, image_url, is_main 
                                      FROM product_images 
                                      WHERE product_id = ? 
                                      ORDER BY is_main DESC, created_at ASC");
@@ -148,28 +169,33 @@ class Product extends BaseModel
     /**
      * Search products
      */
-    public function search(string $keyword, int $limit = 12, int $offset = 0): array
+    /**
+     * Search products
+     */
+    public function search(string $keyword, int $limit = 12, int $offset = 0, ?int $status = 1): array
     {
         $searchTerm = "%{$keyword}%";
-        
-        $stmt = $this->pdo->prepare(
-            "SELECT p.*, c.name as category_name,
+        $sql = "SELECT p.*, c.name as category_name,
                     (SELECT image_url FROM product_images 
                      WHERE product_id = p.id AND is_main = 1 
                      LIMIT 1) as main_image
              FROM products p
              LEFT JOIN categories c ON p.category_id = c.id
-             WHERE p.is_active = 1 
-             AND (p.name LIKE ? OR p.description LIKE ?)
-             ORDER BY p.created_at DESC
-             LIMIT ? OFFSET ?"
-        );
+             WHERE (p.name LIKE ? OR p.description LIKE ?)";
         
-        $stmt->bindValue(1, $searchTerm, PDO::PARAM_STR);
-        $stmt->bindValue(2, $searchTerm, PDO::PARAM_STR);
-        $stmt->bindValue(3, $limit, PDO::PARAM_INT);
-        $stmt->bindValue(4, $offset, PDO::PARAM_INT);
-        $stmt->execute();
+        $params = [$searchTerm, $searchTerm];
+
+        if ($status !== null) {
+            $sql .= " AND p.is_active = ?";
+            $params[] = $status;
+        }
+
+        $sql .= " ORDER BY p.created_at DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = $offset;
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         
         return $stmt->fetchAll();
     }
@@ -177,19 +203,21 @@ class Product extends BaseModel
     /**
      * Count search results
      */
-    public function countSearch(string $keyword): int
+    public function countSearch(string $keyword, ?int $status = 1): int
     {
         $searchTerm = "%{$keyword}%";
+        $sql = "SELECT COUNT(id) FROM products 
+             WHERE (name LIKE ? OR description LIKE ?)";
         
-        $stmt = $this->pdo->prepare(
-            "SELECT COUNT(id) FROM products 
-             WHERE is_active = 1 
-             AND (name LIKE ? OR description LIKE ?)"
-        );
+        $params = [$searchTerm, $searchTerm];
+
+        if ($status !== null) {
+            $sql .= " AND is_active = ?";
+            $params[] = $status;
+        }
         
-        $stmt->bindValue(1, $searchTerm, PDO::PARAM_STR);
-        $stmt->bindValue(2, $searchTerm, PDO::PARAM_STR);
-        $stmt->execute();
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         
         return (int)$stmt->fetchColumn();
     }

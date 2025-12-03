@@ -94,11 +94,20 @@ class Router
      */
     private function callController($controllerName, $action, $params = [])
     {
-        $controllerClass = $controllerName . 'Controller';
-        $controllerFile = __DIR__ . '/../Controllers/' . $controllerClass . '.php';
+        // Handle namespaced controllers (e.g., Admin\Admin)
+        if (strpos($controllerName, '\\') !== false) {
+            // Namespaced controller
+            $controllerClass = $controllerName . 'Controller';
+            $controllerPath = str_replace('\\', '/', $controllerName);
+            $controllerFile = __DIR__ . '/../Controllers/' . $controllerPath . 'Controller.php';
+        } else {
+            // Regular controller
+            $controllerClass = $controllerName . 'Controller';
+            $controllerFile = __DIR__ . '/../Controllers/' . $controllerClass . '.php';
+        }
 
         if (!file_exists($controllerFile)) {
-            die("Controller not found: {$controllerClass}");
+            die("Controller not found: {$controllerFile}");
         }
 
         require_once $controllerFile;

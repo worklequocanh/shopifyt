@@ -84,21 +84,41 @@ CREATE TABLE `product_images` (
 DROP TABLE IF EXISTS `vouchers`;
 CREATE TABLE `vouchers` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `code` VARCHAR(50) NOT NULL UNIQUE,
-  `description` TEXT DEFAULT NULL,
-  `discount_type` ENUM('percentage','fixed') NOT NULL DEFAULT 'percentage',
-  `discount_value` DECIMAL(10,2) NOT NULL,
-  `min_order_value` DECIMAL(10,2) DEFAULT 0,
-  `max_discount` DECIMAL(10,2) DEFAULT 0,
-  `usage_limit` INT UNSIGNED DEFAULT 0 COMMENT '0 = không giới hạn',
-  `start_date` DATE NOT NULL,
-  `end_date` DATE NOT NULL,
-  `is_active` BOOLEAN DEFAULT TRUE,
+  `code` VARCHAR(50) NOT NULL UNIQUE COMMENT 'Mã voucher (VD: SUMMER2024)',
+  `name` VARCHAR(255) NOT NULL COMMENT 'Tên voucher',
+  `description` TEXT DEFAULT NULL COMMENT 'Mô tả voucher',
+  `discount_type` ENUM('percentage','fixed') NOT NULL DEFAULT 'percentage' COMMENT 'Loại giảm giá',
+  `discount_value` DECIMAL(10,2) NOT NULL COMMENT 'Giá trị giảm',
+  `min_order_value` DECIMAL(10,2) DEFAULT 0 COMMENT 'Đơn tối thiểu',
+  `max_discount` DECIMAL(10,2) DEFAULT NULL COMMENT 'Giảm tối đa (cho %)',
+  `usage_limit` INT DEFAULT NULL COMMENT 'Số lần dùng tối đa (NULL=vô hạn)',
+  `used_count` INT NOT NULL DEFAULT 0 COMMENT 'Đã dùng',
+  `start_date` DATETIME NOT NULL,
+  `end_date` DATETIME NOT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_by` INT UNSIGNED DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_code` (`code`),
   INDEX `idx_dates` (`start_date`, `end_date`),
-  INDEX `idx_active` (`is_active`)
+  INDEX `idx_active` (`is_active`),
+  FOREIGN KEY (`created_by`) REFERENCES `accounts`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- 5b. Bảng Lịch sử dùng Voucher (voucher_usage)
+-- ==========================================
+DROP TABLE IF EXISTS `voucher_usage`;
+CREATE TABLE `voucher_usage` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `voucher_id` INT UNSIGNED NOT NULL,
+  `order_id` INT UNSIGNED NOT NULL,
+  `account_id` INT UNSIGNED NOT NULL,
+  `discount_amount` DECIMAL(10,2) NOT NULL,
+  `used_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`voucher_id`) REFERENCES `vouchers`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
@@ -156,10 +176,10 @@ CREATE TABLE `user_carts` (
 -- ==========================================
 
 -- Insert dữ liệu mẫu cho vouchers
-INSERT INTO `vouchers` (`code`, `description`, `discount_type`, `discount_value`, `min_order_value`, `max_discount`, `usage_limit`, `start_date`, `end_date`) VALUES
-('WELCOME10', 'Giảm 10% cho đơn hàng đầu tiên', 'percentage', 10.00, 100000, 50000, 100, '2024-01-01', '2024-12-31'),
-('FREESHIP', 'Miễn phí vận chuyển', 'fixed', 30000, 200000, 0, 0, '2024-01-01', '2024-12-31'),
-('SUMMER50K', 'Giảm 50k cho đơn từ 500k', 'fixed', 50000, 500000, 0, 50, '2024-06-01', '2024-08-31');
+INSERT INTO `vouchers` (`code`, `name`, `description`, `discount_type`, `discount_value`, `min_order_value`, `max_discount`, `usage_limit`, `used_count`, `start_date`, `end_date`, `is_active`, `created_by`) VALUES
+('WELCOME10', 'Chào mừng thành viên mới', 'Giảm 10% cho đơn hàng đầu tiên', 'percentage', 10.00, 100000, 50000, 100, 0, '2024-01-01 00:00:00', '2025-12-31 23:59:59', 1, 1),
+('FREESHIP', 'Miễn phí vận chuyển', 'Giảm 30k phí ship cho đơn từ 200k', 'fixed', 30000, 200000, NULL, NULL, 0, '2024-01-01 00:00:00', '2025-12-31 23:59:59', 1, 1),
+('SUMMER50K', 'Chào Hè Rực Rỡ', 'Giảm 50k cho đơn từ 500k', 'fixed', 50000, 500000, NULL, 50, 0, '2024-06-01 00:00:00', '2025-08-31 23:59:59', 1, 1);
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -205,10 +225,10 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 (10, 'Quần Âu');
 
 -- 2.3. Bảng vouchers
-INSERT INTO `vouchers` (`id`, `code`, `description`, `discount_type`, `discount_value`, `min_order_value`, `max_discount`, `usage_limit`, `start_date`, `end_date`) VALUES
-(1, 'WELCOME10', 'Giảm 10% cho đơn hàng đầu tiên', 'percentage', 10.00, 100000, 50000, 100, '2024-01-01', '2024-12-31'),
-(2, 'FREESHIP', 'Miễn phí vận chuyển', 'fixed', 30000, 200000, 0, 0, '2024-01-01', '2024-12-31'),
-(3, 'SUMMER50K', 'Giảm 50k cho đơn từ 500k', 'fixed', 50000, 500000, 0, 50, '2024-06-01', '2024-08-31');
+INSERT INTO `vouchers` (`id`, `code`, `name`, `description`, `discount_type`, `discount_value`, `min_order_value`, `max_discount`, `usage_limit`, `used_count`, `start_date`, `end_date`, `is_active`, `created_by`) VALUES
+(1, 'WELCOME10', 'Chào mừng thành viên mới', 'Giảm 10% cho đơn hàng đầu tiên', 'percentage', 10.00, 100000, 50000, 100, 0, '2024-01-01 00:00:00', '2025-12-31 23:59:59', 1, 1),
+(2, 'FREESHIP', 'Miễn phí vận chuyển', 'Giảm 30k phí ship cho đơn từ 200k', 'fixed', 30000, 200000, NULL, NULL, 0, '2024-01-01 00:00:00', '2025-12-31 23:59:59', 1, 1),
+(3, 'SUMMER50K', 'Chào Hè Rực Rỡ', 'Giảm 50k cho đơn từ 500k', 'fixed', 50000, 500000, NULL, 50, 0, '2024-06-01 00:00:00', '2025-08-31 23:59:59', 1, 1);
 
 -- 2.4. Bảng products
 INSERT INTO `products` (`id`, `name`, `description`, `price`, `stock`, `category_id`, `is_featured`) VALUES

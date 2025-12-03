@@ -34,9 +34,14 @@ class Voucher extends BaseModel
         }
 
         // Check dates
-        $now = date('Y-m-d');
+        $now = date('Y-m-d H:i:s');
         if ($now < $voucher['start_date'] || $now > $voucher['end_date']) {
-            return ['valid' => false, 'message' => 'Mã giảm giá đã hết hạn sử dụng.'];
+            return ['valid' => false, 'message' => 'Mã giảm giá chưa bắt đầu hoặc đã hết hạn.'];
+        }
+
+        // Check usage limit
+        if (!is_null($voucher['usage_limit']) && $voucher['used_count'] >= $voucher['usage_limit']) {
+            return ['valid' => false, 'message' => 'Mã giảm giá đã hết lượt sử dụng.'];
         }
 
         // Check minimum order value
@@ -89,5 +94,33 @@ class Voucher extends BaseModel
         $stmt->execute([$now, $now]);
         
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Get all vouchers
+     */
+    public function getAll(): array
+    {
+        $sql = "SELECT * FROM {$this->table} ORDER BY created_at DESC";
+        $stmt = $this->pdo->query($sql);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Check if voucher code exists
+     */
+    public function exists(string $code, ?int $excludeId = null): bool
+    {
+        $sql = "SELECT id FROM {$this->table} WHERE code = ?";
+        $params = [$code];
+
+        if ($excludeId) {
+            $sql .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return (bool) $stmt->fetch();
     }
 }

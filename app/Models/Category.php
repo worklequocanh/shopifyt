@@ -13,17 +13,42 @@ class Category extends BaseModel
     /**
      * Get all active categories
      */
-    public function getAll(): array
+    /**
+     * Get all categories with optional search
+     */
+    public function getAll($search = ''): array
     {
-        return $this->findAll();
+        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
+        $params = [];
+
+        if (!empty($search)) {
+            $sql .= " AND name LIKE ?";
+            $params[] = "%$search%";
+        }
+
+        $sql .= " ORDER BY created_at DESC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
     /**
-     * Get category by ID
+     * Check if category name exists
      */
-    public function getById(int $id)
+    public function exists($name, $excludeId = null): bool
     {
-        return $this->find($id);
+        $sql = "SELECT id FROM {$this->table} WHERE name = ?";
+        $params = [$name];
+
+        if ($excludeId) {
+            $sql .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return (bool) $stmt->fetch();
     }
 
     /**

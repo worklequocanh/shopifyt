@@ -22,7 +22,7 @@ class BaseController
      * @param array $data Data to pass to the view
      * @param bool $useLayout Whether to use main layout
      */
-    protected function view(string $view, array $data = [], bool $useLayout = true)
+    protected function view(string $view, array $data = [], $useLayout = true)
     {
         // Extract data to variables
         extract($data);
@@ -44,7 +44,17 @@ class BaseController
 
         // If using layout, wrap content in layout
         if ($useLayout) {
-            include __DIR__ . '/../Views/layouts/main.php';
+            // Check for custom layout
+            if (is_string($useLayout)) {
+                $layoutFile = __DIR__ . '/../Views/layouts/' . $useLayout . '.php';
+                if (file_exists($layoutFile)) {
+                    include $layoutFile;
+                } else {
+                    include __DIR__ . '/../Views/layouts/main.php';
+                }
+            } else {
+                include __DIR__ . '/../Views/layouts/main.php';
+            }
         } else {
             echo $content;
         }
@@ -70,33 +80,70 @@ class BaseController
     }
 
     /**
-     * Check if user is logged in, redirect if not
+     * Require user to be logged in
      */
-    protected function requireAuth()
+    protected function requireAuth(): void
     {
-        if (!isLoggedIn()) {
+        if (!Permission::isLoggedIn()) {
             setFlashMessage('error', 'Vui lòng đăng nhập để tiếp tục.');
             $this->redirect('/auth/login');
         }
     }
 
     /**
-     * Require specific role(s)
+     * Require specific role
      */
-    protected function requireRole($roles)
+    protected function requireRole(string $role): void
     {
-        $this->requireAuth();
+        Permission::requireRole($role);
+    }
 
-        if (!is_array($roles)) {
-            $roles = [$roles];
-        }
+    /**
+     * Require any of the given roles
+     */
+    protected function requireAnyRole(array $roles): void
+    {
+        Permission::requireAnyRole($roles);
+    }
 
-        $currentRole = getCurrentUserRole();
-        
-        if (!in_array($currentRole, $roles)) {
-            http_response_code(403);
-            die('Bạn không có quyền truy cập trang này.');
-        }
+    /**
+     * Require specific permission
+     */
+    protected function requirePermission(string $permission): void
+    {
+        Permission::requirePermission($permission);
+    }
+
+    /**
+     * Check if user has permission
+     */
+    protected function can(string $permission): bool
+    {
+        return Permission::can($permission);
+    }
+
+    /**
+     * Check if user has role
+     */
+    protected function hasRole(string $role): bool
+    {
+        return Permission::hasRole($role);
+    }
+
+    /**
+     * Get current user's role
+     */
+    protected function getRole(): string
+    {
+        return Permission::getCurrentRole();
+    }
+
+    /**
+     * Check if user is staff (admin/employee)
+     */
+    protected function isStaff(): bool
+    {
+        return Permission::isStaff();
     }
 
     /**

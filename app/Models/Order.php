@@ -169,12 +169,24 @@ class Order extends BaseModel
     /**
      * Get order by ID
      */
-    public function getOrderById(int $orderId, int $accountId): ?array
+    /**
+     * Get order by ID
+     */
+    public function getOrderById(int $orderId, ?int $accountId = null): ?array
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT * FROM orders WHERE id = ? AND account_id = ?"
-        );
-        $stmt->execute([$orderId, $accountId]);
+        $sql = "SELECT o.*, a.name as customer_name, a.email as customer_email 
+                FROM orders o
+                LEFT JOIN accounts a ON o.account_id = a.id
+                WHERE o.id = ?";
+        $params = [$orderId];
+
+        if ($accountId !== null) {
+            $sql .= " AND o.account_id = ?";
+            $params[] = $accountId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $order = $stmt->fetch();
 
         if ($order) {
@@ -256,5 +268,105 @@ class Order extends BaseModel
         }
 
         return $this->update($orderId, ['status' => $status]);
+    }
+
+    /**
+     * Get revenue by month for a specific year
+     */
+    public function getRevenueByMonth(int $year): array
+    {
+        $sql = "SELECT MONTH(order_date) as month, 
+                       SUM(total_amount) as revenue, 
+                       COUNT(id) as order_count
+                FROM {$this->table}
+                WHERE YEAR(order_date) = ? 
+                AND status IN ('paid', 'shipped', 'accepted')
+                GROUP BY MONTH(order_date)
+                ORDER BY month";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$year]);
+        
+        $result = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $result[$row['month']] = $row;
+        }
+        return $result;
+    }
+
+    /**
+     * Get KPI data for employees
+     */
+    public function getEmployeeKPI(int $month, int $year): array
+    {
+        $sql = "SELECT a.id, a.name, a.position,
+                       COUNT(DISTINCT o.id) as orders_processed,
+                       COALESCE(SUM(o.total_amount), 0) as total_sales,
+                       COALESCE(AVG(o.total_amount), 0) as avg_order_value
+                FROM accounts a
+                LEFT JOIN orders o ON o.account_id = a.id 
+                    AND MONTH(o.order_date) = ? 
+                    AND YEAR(o.order_date) = ?
+                    AND o.status IN ('paid', 'shipped', 'accepted')
+                WHERE a.role IN ('admin', 'employee')
+                GROUP BY a.id, a.name, a.position
+                ORDER BY total_sales DESC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$month, $year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get total sales for a specific month/year (for comparison)
+     */
+    public function getTotalSalesByMonth(int $month, int $year): array
+    {
+        $sql = "SELECT a.id,
+                       COALESCE(SUM(o.total_amount), 0) as total_sales
+                FROM accounts a
+                LEFT JOIN orders o ON o.account_id = a.id 
+                    AND MONTH(o.order_date) = ? 
+                    AND YEAR(o.order_date) = ?
+                    AND o.status IN ('paid', 'shipped', 'accepted')
+                WHERE a.role IN ('admin', 'employee')
+                GROUP BY a.id";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$month, $year]);
+        
+        $result = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $result[$row['id']] = $row['total_sales'];
+        }
+        return $result;
+    }
+
+    /**
+     * Get quick stats for dashboard
+     */
+    public function getQuickStats(): array
+    {
+        $stats = [];
+        
+        // Total Revenue
+        $stmt = $this->pdo->query("SELECT SUM(total_amount) FROM orders WHERE status IN ('paid', 'shipped', 'accepted')");
+        $stats['total_revenue'] = $stmt->fetchColumn() ?: 0;
+        
+        // Total Orders
+        $stats['total_orders'] = $this->count();
+        
+        // Pending Orders
+        $stats['pending_orders'] = $this->count("status = 'pending'");
+        
+        // Total Products
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM products WHERE is_active = 1");
+        $stats['total_products'] = $stmt->fetchColumn();
+        
+        // Total Customers
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM accounts WHERE role = 'customer'");
+        $stats['total_customers'] = $stmt->fetchColumn();
+        
+        return $stats;
     }
 }

@@ -79,10 +79,10 @@ class Account extends BaseModel
     /**
      * Get redirect URL based on role
      */
-    private function getRedirectUrl($role): string
+    private function getRedirectUrl(string $role): string
     {
         if ($role === 'admin' || $role === 'employee') {
-            return '/admin/index.php';
+            return '/admin/dashboard';
         }
         return '/';
     }
@@ -169,5 +169,106 @@ class Account extends BaseModel
 
         $currentRole = $this->getCurrentRole();
         return in_array($currentRole, $roles);
+    }
+
+    /**
+     * Get all accounts with filters
+     */
+    public function getAllAccounts($role = 'all', $search = ''): array
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
+        $params = [];
+
+        if ($role !== 'all') {
+            $sql .= " AND role = ?";
+            $params[] = $role;
+        }
+
+        if (!empty($search)) {
+            $sql .= " AND (name LIKE ? OR email LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $sql .= " ORDER BY created_at DESC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Create new account (admin)
+     */
+    public function createAccount(array $data): bool
+    {
+        try {
+            // Hash password
+            if (isset($data['password'])) {
+                $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+            }
+            
+            $this->create($data);
+            return true;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Update account (admin)
+     */
+    public function updateAccount(int $id, array $data): bool
+    {
+        try {
+            // Hash password if provided
+            if (!empty($data['password'])) {
+                $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+            } else {
+                unset($data['password']);
+            }
+            
+            return $this->update($id, $data);
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Toggle active status
+     */
+    public function toggleActive(int $id): bool
+    {
+        $account = $this->find($id);
+        if (!$account) return false;
+
+        $newStatus = $account['is_active'] ? 0 : 1;
+        return $this->update($id, ['is_active' => $newStatus]);
+    }
+
+    /**
+     * Count customers
+     */
+    public function countCustomers(): int
+    {
+        return $this->count("role = 'customer'");
+    }
+
+    /**
+     * Check if email exists
+     */
+    public function emailExists(string $email, ?int $excludeId = null): bool
+    {
+        $sql = "SELECT id FROM {$this->table} WHERE email = ?";
+        $params = [$email];
+
+        if ($excludeId) {
+            $sql .= " AND id != ?";
+            $params[] = $excludeId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return (bool) $stmt->fetch();
     }
 }
