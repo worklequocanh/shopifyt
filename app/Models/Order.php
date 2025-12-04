@@ -369,4 +369,195 @@ class Order extends BaseModel
         
         return $stats;
     }
+
+    /**
+     * Get revenue by product category
+     */
+    public function getRevenueByCategory(int $year): array
+    {
+        $sql = "SELECT c.name as category_name, 
+                       COALESCE(SUM(od.subtotal), 0) as revenue,
+                       COUNT(DISTINCT o.id) as order_count
+                FROM categories c
+                LEFT JOIN products p ON p.category_id = c.id
+                LEFT JOIN order_details od ON od.product_id = p.id
+                LEFT JOIN orders o ON o.id = od.order_id 
+                    AND YEAR(o.order_date) = ?
+                    AND o.status IN ('paid', 'shipped', 'accepted')
+                GROUP BY c.id, c.name
+                ORDER BY revenue DESC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get top selling products
+     */
+    public function getTopProducts(int $limit = 10, int $year = null): array
+    {
+        $yearCondition = $year ? "AND YEAR(o.order_date) = ?" : "";
+        $params = $year ? [$year] : [];
+        
+        $sql = "SELECT p.name, p.price,
+                       SUM(od.quantity) as total_quantity,
+                       COALESCE(SUM(od.subtotal), 0) as total_revenue,
+                       COUNT(DISTINCT o.id) as order_count
+                FROM products p
+                INNER JOIN order_details od ON od.product_id = p.id
+                INNER JOIN orders o ON o.id = od.order_id 
+                    AND o.status IN ('paid', 'shipped', 'accepted')
+                    {$yearCondition}
+                GROUP BY p.id, p.name, p.price
+                ORDER BY total_quantity DESC
+                LIMIT ?";
+        
+        $params[] = $limit;
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get order status distribution
+     */
+    public function getOrderStatusDistribution(int $year = null): array
+    {
+        $yearCondition = $year ? "WHERE YEAR(order_date) = ?" : "";
+        $params = $year ? [$year] : [];
+        
+        $sql = "SELECT status, COUNT(*) as count
+                FROM orders
+                {$yearCondition}
+                GROUP BY status
+                ORDER BY count DESC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get average order value and other aggregate metrics
+     */
+    public function getAggregateMetrics(int $year): array
+    {
+        $sql = "SELECT 
+                    COUNT(*) as total_orders,
+                    COALESCE(SUM(total_amount), 0) as total_revenue,
+                    COALESCE(AVG(total_amount), 0) as avg_order_value,
+                    COALESCE(SUM(discount_amount), 0) as total_discounts
+                FROM orders
+                WHERE YEAR(order_date) = ?
+                AND status IN ('paid', 'shipped', 'accepted')";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$year]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Get daily revenue trend for last N days
+     */
+    public function getDailyRevenueTrend(int $days = 30): array
+    {
+        $sql = "SELECT DATE(order_date) as date,
+                       COALESCE(SUM(total_amount), 0) as revenue,
+                       COUNT(*) as order_count
+                FROM orders
+                WHERE order_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                AND status IN ('paid', 'shipped', 'accepted')
+                GROUP BY DATE(order_date)
+                ORDER BY date ASC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$days]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get customer statistics
+     */
+    public function getCustomerStats(): array
+    {
+        $stats = [];
+        
+        // Total customers
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM accounts WHERE role = 'customer'");
+        $stats['total_customers'] = $stmt->fetchColumn();
+        
+        // Customers who made purchases
+        $stmt = $this->pdo->query("SELECT COUNT(DISTINCT account_id) FROM orders");
+        $stats['active_customers'] = $stmt->fetchColumn();
+        
+        // Average customer lifetime value
+        $stmt = $this->pdo->query("
+            SELECT COALESCE(AVG(customer_total), 0) as avg_lifetime_value
+            FROM (
+                SELECT account_id, SUM(total_amount) as customer_total
+                FROM orders
+                WHERE status IN ('paid', 'shipped', 'accepted')
+                GROUP BY account_id
+            ) as customer_totals
+        ");
+        $stats['avg_lifetime_value'] = $stmt->fetchColumn();
+        
+        return $stats;
+    }
+
+    /**
+     * Get top customers by spending
+     */
+    public function getTopCustomers(int $limit = 5): array
+    {
+        $sql = "SELECT a.name, a.email,
+                       COUNT(o.id) as total_orders,
+                       COALESCE(SUM(o.total_amount), 0) as total_spent
+                FROM accounts a
+                INNER JOIN orders o ON o.account_id = a.id
+                WHERE a.role = 'customer'
+                AND o.status IN ('paid', 'shipped', 'accepted')
+                GROUP BY a.id, a.name, a.email
+                ORDER BY total_spent DESC
+                LIMIT ?";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get recent orders
+     */
+    public function getRecentOrders(int $limit = 10): array
+    {
+        $sql = "SELECT o.id, o.total_amount, o.status, o.order_date,
+                       a.name as customer_name
+                FROM orders o
+                LEFT JOIN accounts a ON a.id = o.account_id
+                ORDER BY o.order_date DESC
+                LIMIT ?";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get low stock products
+     */
+    public function getLowStockProducts(int $threshold = 10): array
+    {
+        $sql = "SELECT id, name, stock, price
+                FROM products
+                WHERE is_active = 1
+                AND stock <= ?
+                ORDER BY stock ASC
+                LIMIT 10";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$threshold]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

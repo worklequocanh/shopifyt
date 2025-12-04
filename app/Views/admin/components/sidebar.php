@@ -64,7 +64,7 @@
       <a href="/admin/reports/stats" 
          class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/reports/stats') !== false ? 'active' : ''; ?>">
         <i class="bi bi-trophy"></i>
-        Thống kê nhanh
+        Thống kê chi tiết
       </a>
     <?php endif; ?>
   </nav>

@@ -226,7 +226,7 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                         <div class="card report-card" style="border-color:rgb(246, 230, 5);">
                             <div class="card-body text-center">
                                 <i class="bi bi-trophy text-warning" style="font-size: 3rem;"></i>
-                                <h5 class="mt-3">Thống kê nhanh</h5>
+                                <h5 class="mt-3">Thống kê chi tiết</h5>
                                 <p class="text-muted mb-0">Xem tổng quan hệ thống</p>
                             </div>
                         </div>

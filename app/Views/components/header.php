@@ -1,5 +1,5 @@
 <?php $logined = isLoggedIn(); ?>
-<?php include __DIR__ . '/flash-message.php'; ?>
+<?php include __DIR__ . '/flash-message-user.php'; ?>
 
 <header x-data="{ mobileMenuOpen: false, userMenuOpen: false }"
   class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
@@ -43,6 +43,9 @@
               class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50">
               <div class="px-4 py-2 text-sm text-gray-700">Chào, <span
                   class="font-medium"><?php echo htmlspecialchars($_SESSION['name'] ?? 'Bạn'); ?></span></div>
+              <?php if (in_array(($_SESSION['role'] ?? ''), ['admin', 'employee'])): ?>
+                <a href="/admin/dashboard" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</a>
+              <?php endif; ?>
               <a href="/account/info" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Tài khoản của
                 tôi</a>
               <a href="/auth/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Đăng xuất</a>
@@ -77,6 +80,9 @@
 
       <div class="border-t mt-4 pt-4 space-y-2">
         <?php if ($logined): ?>
+          <?php if (in_array(($_SESSION['role'] ?? ''), ['admin', 'employee'])): ?>
+            <a href="/admin/dashboard" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Dashboard</a>
+          <?php endif; ?>
           <a href="/account/info" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Tài khoản của
             tôi</a>
           <a href="/auth/logout" class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-100">Đăng xuất</a>

@@ -1,7 +1,7 @@
 <?php
 /**
- * Flash Message Component
- * Displays server-side flash messages using the notification system
+ * User Flash Message Component (Tailwind CSS)
+ * Displays server-side flash messages using the custom Notification system
  */
 
 if (isset($_SESSION['flash_message'])) {

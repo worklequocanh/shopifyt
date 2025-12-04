@@ -53,16 +53,6 @@
         });
     }
 
-    // Check for session flash messages
-    <?php if (isset($_SESSION['flash_message'])): ?>
-        <?php 
-            $flash = $_SESSION['flash_message'];
-            unset($_SESSION['flash_message']);
-        ?>
-        document.addEventListener('DOMContentLoaded', () => {
-            showAdminToast('<?php echo addslashes($flash['message']); ?>', '<?php echo $flash['type']; ?>');
-        });
-    <?php endif; ?>
   </script>
 
   <?php include __DIR__ . '/../admin/components/footer.php'; ?>
