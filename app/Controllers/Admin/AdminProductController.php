@@ -250,7 +250,8 @@ class AdminProductController extends BaseController
         }
 
         // Soft delete - just mark as inactive
-        $stmt = $this->pdo->prepare("UPDATE products SET is_active = 0 WHERE id = ?");
+        // $stmt = $this->pdo->prepare("UPDATE products SET is_active = 0 WHERE id = ?");
+        $stmt = $this->pdo->prepare("DELETE FROM products WHERE id = ?");
         
         if ($stmt->execute([$id])) {
             $this->json(['success' => true, 'message' => 'Xóa sản phẩm thành công']);
