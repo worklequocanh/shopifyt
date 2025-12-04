@@ -44,6 +44,14 @@ $router->add('/contact', 'Contact', 'index');
 $router->add('/auth/login', 'Auth', 'login');
 $router->add('/auth/register', 'Auth', 'register');
 $router->add('/auth/logout', 'Auth', 'logout');
+$router->add('/auth/verify/:token', 'Auth', 'verify'); // Email verification with token
+$router->add('/auth/verify-notice', 'Auth', 'verifyNotice'); // Verification notice page
+$router->add('/auth/resend-verification', 'Auth', 'resendVerification'); // Resend verification
+
+// Password Reset
+$router->add('/auth/forgot-password', 'PasswordReset', 'requestReset');
+$router->add('/auth/reset-password/:token', 'PasswordReset', 'showResetForm'); // Show reset form
+$router->add('/auth/reset-password', 'PasswordReset', 'resetPassword'); // Process reset
 
 // Products
 $router->add('/product', 'Product', 'index');
@@ -110,6 +118,9 @@ $router->add('/admin/vouchers', 'Admin\\AdminVoucher', 'index');
 $router->add('/admin/vouchers/store', 'Admin\\AdminVoucher', 'store');
 $router->add('/admin/vouchers/update', 'Admin\\AdminVoucher', 'update');
 $router->add('/admin/vouchers/delete/:id', 'Admin\\AdminVoucher', 'delete');
+
+// Voucher API (User-facing)
+$router->add('/api/voucher/validate', 'Voucher', 'validate');
 
 // Dispatch the request
 $router->dispatch();

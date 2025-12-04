@@ -28,6 +28,11 @@ CREATE TABLE `accounts` (
   `position` VARCHAR(255) DEFAULT NULL COMMENT 'Chức vụ dành cho vai trò nhân viên',
   `role` ENUM('admin', 'employee', 'customer') NOT NULL DEFAULT 'customer',
   `is_active` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'Tài khoản đang hoạt động (TRUE) hay bị khóa (FALSE)',
+  `email_verified` TINYINT(1) DEFAULT 0 COMMENT 'Email verified status',
+  `verification_token` VARCHAR(64) DEFAULT NULL COMMENT 'Email verification token',
+  `verification_expires` DATETIME DEFAULT NULL COMMENT 'Token expiry time',
+  `reset_token` VARCHAR(64) DEFAULT NULL COMMENT 'Password reset token',
+  `reset_expires` DATETIME DEFAULT NULL COMMENT 'Reset token expiry',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_email` (`email`)
@@ -131,16 +136,17 @@ CREATE TABLE `orders` (
   `customer_name` VARCHAR(255) NOT NULL,
   `shipping_address` TEXT NOT NULL,
   `shipping_phone` VARCHAR(15) NOT NULL,
-  `total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (`total_amount` >= 0),
-  `voucher_id` INT UNSIGNED DEFAULT NULL,
-  `discount_amount` DECIMAL(10,2) DEFAULT 0,
+  `total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (`total_amount` >= 0) COMMENT 'Tổng tiền sau khi giảm giá (final amount)',
+  `voucher_id` INT UNSIGNED DEFAULT NULL COMMENT 'Mã giảm giá đã áp dụng',
+  `discount_amount` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Số tiền được giảm từ voucher',
   `order_date` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `status` ENUM('pending', 'accepted', 'cancelled') NOT NULL DEFAULT 'pending',
   FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`voucher_id`) REFERENCES `vouchers`(`id`) ON DELETE SET NULL,
   INDEX `idx_account_id` (`account_id`),
   INDEX `fk_voucher` (`voucher_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
+COMMENT='Orders table - total_amount is FINAL amount after discount';
 
 -- ==========================================
 -- 7. Bảng Chi tiết đơn hàng (order_details)

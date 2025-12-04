@@ -159,10 +159,28 @@
                       <p><strong>Người nhận:</strong> <?php echo e($order['customer_name']); ?></p>
                       <p><strong>Địa chỉ:</strong> <?php echo e($order['shipping_address']); ?></p>
                       <p><strong>SĐT:</strong> <?php echo e($order['shipping_phone']); ?></p>
+                      <?php if (!empty($order['voucher_id'])): ?>
+                        <p class="mt-2">
+                          <span class="inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                            <?php echo htmlspecialchars($order['voucher_code']); ?>
+                          </span>
+                          <span class="text-xs ml-1">-<?php echo format_currency($order['discount_amount']); ?></span>
+                        </p>
+                      <?php endif; ?>
                     </div>
 
                     <div class="flex justify-between items-center mt-4 pt-4 border-t">
-                      <p class="font-bold text-lg text-green-600"><?php echo format_currency($order['total_amount']); ?></p>
+                      <?php if (!empty($order['voucher_id'])): ?>
+                        <div class="text-sm">
+                          <p class="text-gray-500 line-through"><?php echo format_currency($order['total_amount'] + $order['discount_amount']); ?></p>
+                          <p class="font-bold text-lg text-green-600"><?php echo format_currency($order['total_amount']); ?></p>
+                        </div>
+                      <?php else: ?>
+                        <p class="font-bold text-lg text-green-600"><?php echo format_currency($order['total_amount']); ?></p>
+                      <?php endif; ?>
                       <a href="/order/detail/<?php echo $order['id']; ?>" class="text-blue-600 hover:underline">
                         Xem chi tiết →
                       </a>

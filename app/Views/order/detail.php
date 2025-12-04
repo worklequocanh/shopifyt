@@ -111,8 +111,24 @@
           <div class="space-y-3 mb-6">
             <div class="flex justify-between text-sm">
               <span class="text-gray-600">Tạm tính:</span>
-              <span><?php echo format_currency($order['total_amount']); ?></span>
+              <span><?php echo format_currency($order['total_amount'] + ($order['discount_amount'] ?? 0)); ?></span>
             </div>
+            
+            <?php if (!empty($order['voucher_id'])): ?>
+              <div class="bg-green-50 border border-green-200 rounded-lg p-3 -mx-1">
+                <div class="flex items-center justify-between mb-1">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    <span class="text-xs font-semibold text-green-800 uppercase"><?php echo htmlspecialchars($order['voucher_code']); ?></span>
+                  </div>
+                  <span class="text-sm font-bold text-green-700">-<?php echo format_currency($order['discount_amount']); ?></span>
+                </div>
+                <p class="text-xs text-green-700"><?php echo htmlspecialchars($order['voucher_name']); ?></p>
+              </div>
+            <?php endif; ?>
+            
             <div class="flex justify-between text-sm">
               <span class="text-gray-600">Phí vận chuyển:</span>
               <span class="text-green-600">Miễn phí</span>

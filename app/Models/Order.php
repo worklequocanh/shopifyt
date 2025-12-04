@@ -13,14 +13,16 @@ class Order extends BaseModel
     /**
      * Create order from cart
      */
-    public function createFromCart(int $accountId, array $shippingData = [], array $selectedIds = []): array
+    public function createFromCart(int $accountId, array $shippingData = [], array $selectedIds = [], ?string $voucherCode = null): array
     {
         try {
             $this->pdo->beginTransaction();
 
-            // Load Cart model
+            // Load Cart and Voucher models
             require_once __DIR__ . '/Cart.php';
+            require_once __DIR__ . '/Voucher.php';
             $cartModel = new Cart();
+            $voucherModel = new Voucher();
 
             // Get cart
             $cart = $cartModel->getCart($accountId);
@@ -50,11 +52,36 @@ class Order extends BaseModel
             $products = $this->getProductsInfo(array_keys($cart));
             $totalAmount = $this->calculateTotalAmount($cart, $products);
 
-            // Create order
-            $orderId = $this->createOrder($accountId, $shippingInfo, $totalAmount);
+            // Handle voucher if provided
+            $voucherId = null;
+            $discountAmount = 0;
+            
+            if (!empty($voucherCode)) {
+                error_log("Voucher code provided: " . $voucherCode);
+                $voucherValidation = $voucherModel->validate($voucherCode, $totalAmount);
+                
+                if ($voucherValidation['valid']) {
+                    $voucher = $voucherValidation['voucher'];
+                    $voucherId = $voucher['id'];
+                    $discountAmount = $voucherModel->calculateDiscount($voucher, $totalAmount);
+                    error_log("Voucher valid - ID: $voucherId, Discount: $discountAmount");
+                } else {
+                    error_log("Voucher validation failed: " . $voucherValidation['message']);
+                    // Don't throw exception, just continue without voucher
+                    // throw new Exception($voucherValidation['message']);
+                }
+            }
+
+            // Create order with voucher
+            $orderId = $this->createOrder($accountId, $shippingInfo, $totalAmount, $voucherId, $discountAmount);
             
             // Create order details
             $this->createOrderDetails($orderId, $cart, $products);
+
+            // Track voucher usage if applied
+            if ($voucherId) {
+                $this->trackVoucherUsage($voucherId, $orderId, $accountId, $discountAmount);
+            }
 
             // Remove ordered items from cart (only selected ones)
             foreach (array_keys($cart) as $productId) {
@@ -62,6 +89,20 @@ class Order extends BaseModel
             }
 
             $this->pdo->commit();
+            
+            // Send order confirmation email (after commit, non-blocking)
+            try {
+                $orderDetails = $this->getOrderById($orderId);
+                if ($orderDetails) {
+                    require_once __DIR__ . '/../Helpers/email_helpers.php';
+                    $emailService = getEmailService();
+                    $emailService->sendOrderConfirmation($orderDetails);
+                    error_log("Order confirmation email sent for order #$orderId");
+                }
+            } catch (Exception $e) {
+                // Log but don't fail the order if email fails
+                error_log("Failed to send order confirmation email: " . $e->getMessage());
+            }
 
             return ['success' => true, 'message' => 'Đặt hàng thành công!', 'order_id' => $orderId];
         } catch (Exception $e) {
@@ -133,18 +174,22 @@ class Order extends BaseModel
     /**
      * Create order record
      */
-    private function createOrder(int $accountId, array $shippingInfo, float $totalAmount): int
+    private function createOrder(int $accountId, array $shippingInfo, float $totalAmount, ?int $voucherId = null, float $discountAmount = 0): int
     {
+        $finalAmount = $totalAmount - $discountAmount;
+        
         $stmt = $this->pdo->prepare(
-            "INSERT INTO orders (account_id, customer_name, shipping_address, shipping_phone, total_amount) 
-             VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO orders (account_id, customer_name, shipping_address, shipping_phone, total_amount, voucher_id, discount_amount) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $accountId,
             $shippingInfo['name'],
             $shippingInfo['address'],
             $shippingInfo['phone'],
-            $totalAmount
+            $finalAmount,
+            $voucherId,
+            $discountAmount
         ]);
 
         return (int)$this->pdo->lastInsertId();
@@ -169,14 +214,17 @@ class Order extends BaseModel
     /**
      * Get order by ID
      */
-    /**
-     * Get order by ID
-     */
     public function getOrderById(int $orderId, ?int $accountId = null): ?array
     {
-        $sql = "SELECT o.*, a.name as customer_name, a.email as customer_email 
+        $sql = "SELECT o.*, 
+                       a.name as customer_name, 
+                       a.email as customer_email,
+                       v.code as voucher_code,
+                       v.name as voucher_name,
+                       v.discount_type as voucher_discount_type
                 FROM orders o
                 LEFT JOIN accounts a ON o.account_id = a.id
+                LEFT JOIN vouchers v ON o.voucher_id = v.id
                 WHERE o.id = ?";
         $params = [$orderId];
 
@@ -243,9 +291,13 @@ class Order extends BaseModel
     public function getByUser(int $accountId, int $limit = 10, int $offset = 0): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT * FROM orders 
-             WHERE account_id = ? 
-             ORDER BY order_date DESC 
+            "SELECT o.*, 
+                    v.code as voucher_code, 
+                    v.name as voucher_name
+             FROM orders o
+             LEFT JOIN vouchers v ON o.voucher_id = v.id
+             WHERE o.account_id = ? 
+             ORDER BY o.order_date DESC 
              LIMIT ? OFFSET ?"
         );
         $stmt->bindValue(1, $accountId, PDO::PARAM_INT);
@@ -559,5 +611,22 @@ class Order extends BaseModel
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$threshold]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Track voucher usage
+     */
+    private function trackVoucherUsage(int $voucherId, int $orderId, int $accountId, float $discountAmount): void
+    {
+        // Insert into voucher_usage table
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO voucher_usage (voucher_id, order_id, account_id, discount_amount) 
+             VALUES (?, ?, ?, ?)"
+        );
+        $stmt->execute([$voucherId, $orderId, $accountId, $discountAmount]);
+        
+        // Increment used_count in vouchers table
+        $stmt = $this->pdo->prepare("UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?");
+        $stmt->execute([$voucherId]);
     }
 }

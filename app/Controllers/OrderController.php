@@ -54,8 +54,11 @@ class OrderController extends BaseController
             // Get selected items
             $selectedIds = $_SESSION['selected_cart_items'] ?? [];
             
-            // Process checkout with selected items
-            $result = $this->orderModel->createFromCart($accountId, $shippingData, $selectedIds);
+            // Get voucher code if provided
+            $voucherCode = $this->post('voucher_code', '');
+            
+            // Process checkout with selected items and voucher
+            $result = $this->orderModel->createFromCart($accountId, $shippingData, $selectedIds, $voucherCode);
 
             if ($result['success']) {
                 // Clear selected items from session

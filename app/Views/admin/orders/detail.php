@@ -88,6 +88,19 @@
                                 <?php endforeach; ?>
                             </tbody>
                             <tfoot>
+                                <?php if (!empty($order['voucher_id'])): ?>
+                                    <tr>
+                                        <td colspan="3" class="text-end">Tạm tính:</td>
+                                        <td class="text-end"><?php echo number_format($order['total_amount'] + $order['discount_amount'], 0, ',', '.'); ?>đ</td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <td colspan="3" class="text-end">
+                                            <span class="badge bg-success me-2"><?php echo htmlspecialchars($order['voucher_code']); ?></span>
+                                            <?php echo htmlspecialchars($order['voucher_name']); ?>
+                                        </td>
+                                        <td class="text-end text-success fw-bold">-<?php echo number_format($order['discount_amount'], 0, ',', '.'); ?>đ</td>
+                                    </tr>
+                                <?php endif; ?>
                                 <tr>
                                     <td colspan="3" class="text-end fw-bold">Tổng:</td>
                                     <td class="text-end fw-bold text-danger"><?php echo number_format($order['total_amount'], 0, ',', '.'); ?>đ</td>

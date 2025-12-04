@@ -23,19 +23,51 @@ class Account extends BaseModel
 
             // Hash password
             $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
+            
+            // Generate verification token (64 chars hex)
+            require_once __DIR__ . '/../Helpers/email_helpers.php';
+            $token = generateToken(32);
+            $hashedToken = hashToken($token);
+            
+            // Token expires in 24 hours
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-            // Insert user
+            // Insert user with verification token
             $userId = $this->create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => $hashedPassword,
                 'phone' => $data['phone'] ?? null,
                 'address' => $data['address'] ?? null,
-                'role' => 'customer'
+                'role' => 'customer',
+                'email_verified' => 0,
+                'verification_token' => $hashedToken,
+                'verification_expires' => $expiresAt
             ]);
+            
+            // Send verification email
+            $user = [
+                'id' => $userId,
+                'name' => $data['name'],
+                'email' => $data['email']
+            ];
+            
+            $emailService = getEmailService();
+            $emailSent = $emailService->sendVerification($user, $token);
+            
+            if ($emailSent) {
+                error_log("Verification email sent to: {$data['email']}");
+            } else {
+                error_log("Failed to send verification email to: {$data['email']}");
+            }
 
-            return ['success' => true, 'message' => 'Đăng ký tài khoản thành công!', 'user_id' => $userId];
+            return [
+                'success' => true, 
+                'message' => 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.', 
+                'user_id' => $userId
+            ];
         } catch (PDOException $e) {
+            error_log("Registration error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Không thể đăng ký: ' . $e->getMessage()];
         }
     }
@@ -46,31 +78,28 @@ class Account extends BaseModel
     public function login(string $email, string $password): array
     {
         try {
-            $stmt = $this->pdo->prepare("SELECT id, name, role, email, password 
+            $stmt = $this->pdo->prepare("SELECT id, name, role, email, password, email_verified 
                                          FROM accounts 
                                          WHERE email = ? AND is_active = 1");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
-            if ($user && password_verify($password, $user['password'])) {
-                // Regenerate session ID for security
-                session_regenerate_id(true);
-                
-                // Set session variables
-                $_SESSION['id'] = $user['id'];
-                $_SESSION['name'] = $user['name'];
-                $_SESSION['role'] = $user['role'];
-                $_SESSION['email'] = $user['email'];
-
-                return [
-                    'success' => true,
-                    'message' => 'Đăng nhập thành công!',
-                    'user' => $user,
-                    'redirect' => $this->getRedirectUrl($user['role'])
-                ];
+            if (!$user) {
+                return ['success' => false, 'message' => 'Email hoặc mật khẩu không đúng.'];
             }
 
-            return ['success' => false, 'message' => 'Email hoặc mật khẩu không đúng.'];
+            if (!password_verify($password, $user['password'])) {
+                return ['success' => false, 'message' => 'Email hoặc mật khẩu không đúng.'];
+            }
+
+            // Remove password from user data
+            unset($user['password']);
+
+            return [
+                'success' => true,
+                'message' => 'Đăng nhập thành công!',
+                'user' => $user
+            ];
         } catch (PDOException $e) {
             return ['success' => false, 'message' => 'Lỗi đăng nhập: ' . $e->getMessage()];
         }
@@ -195,6 +224,125 @@ class Account extends BaseModel
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+    
+    /**
+     * Verify email with token
+     */
+    public function verifyEmail(string $token): array
+    {
+        try {
+            require_once __DIR__ . '/../Helpers/email_helpers.php';
+            $hashedToken = hashToken($token);
+            
+            // Find user with this token
+            $stmt = $this->pdo->prepare(
+                "SELECT * FROM accounts 
+                 WHERE verification_token = ? 
+                 AND verification_expires > NOW()
+                 LIMIT 1"
+            );
+            $stmt->execute([$hashedToken]);
+            $user = $stmt->fetch();
+            
+            if (!$user) {
+                return ['success' => false, 'message' => 'Token không hợp lệ hoặc đã hết hạn.'];
+            }
+            
+            if ($user['email_verified']) {
+                return ['success' => false, 'message' => 'Email đã được xác nhận trước đó.'];
+            }
+            
+            // Mark as verified
+            $this->update($user['id'], [
+                'email_verified' => 1,
+                'verification_token' => null,
+                'verification_expires' => null
+            ]);
+            
+            return [
+                'success' => true, 
+                'message' => 'Xác nhận email thành công! Bạn có thể đăng nhập ngay.',
+                'user' => $user
+            ];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Lỗi xác nhận: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Request password reset
+     */
+    public function requestPasswordReset(string $email): array
+    {
+        try {
+            $user = $this->findWhere('email', $email);
+            
+            if (!$user) {
+                // Don't reveal if email exists (security)
+                return ['success' => true, 'message' => 'Nếu email tồn tại, link đặt lại mật khẩu đã được gửi.'];
+            }
+            
+            require_once __DIR__ . '/../Helpers/email_helpers.php';
+            $token = generateToken(32);
+            $hashedToken = hashToken($token);
+            
+            // Token expires in 1 hour
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            
+            // Save reset token
+            $this->update($user['id'], [
+                'reset_token' => $hashedToken,
+                'reset_expires' => $expiresAt
+            ]);
+            
+            // Send reset email
+            $emailService = getEmailService();
+            $emailService->sendPasswordReset($user, $token);
+            
+            return ['success' => true, 'message' => 'Nếu email tồn tại, link đặt lại mật khẩu đã được gửi.'];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Reset password with token
+     */
+    public function resetPassword(string $token, string $newPassword): array
+    {
+        try {
+            require_once __DIR__ . '/../Helpers/email_helpers.php';
+            $hashedToken = hashToken($token);
+            
+            // Find user with valid reset token
+            $stmt = $this->pdo->prepare(
+                "SELECT * FROM accounts 
+                 WHERE reset_token = ? 
+                 AND reset_expires > NOW()
+                 LIMIT 1"
+            );
+            $stmt->execute([$hashedToken]);
+            $user = $stmt->fetch();
+            
+            if (!$user) {
+                return ['success' => false, 'message' => 'Token không hợp lệ hoặc đã hết hạn.'];
+            }
+            
+            // Hash new password
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            // Update password and clear reset token
+            $this->update($user['id'], [
+                'password' => $hashedPassword,
+                'reset_token' => null,
+                'reset_expires' => null
+            ]);
+            
+            return ['success' => true, 'message' => 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.'];
+        } catch (PDOException $e) {
+            return ['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()];
+        }
     }
 
     /**

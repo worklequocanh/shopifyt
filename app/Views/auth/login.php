@@ -8,11 +8,16 @@
         <input type="email" name="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
       
-      <div class="mb-6">
-        <label class="block text-gray-700 mb-2">Mật khẩu</label>
-        <input type="password" name="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <div class="mb-4">
+        <label class="block text-gray-700 mb-2 font-medium">Mật khẩu *</label>
+        <input type="password" name="password" required
+               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
       
+      <div class="flex justify-end mb-6">
+        <a href="/auth/forgot-password" class="text-sm text-blue-600 hover:underline">Quên mật khẩu?</a>
+      </div>
+
       <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
         Đăng nhập
       </button>

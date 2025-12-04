@@ -197,6 +197,22 @@ class AdminOrderController extends BaseController
 
             $this->pdo->commit();
             
+            // Send status update email (only for accepted/cancelled)
+            if (in_array($newStatus, ['accepted', 'cancelled'])) {
+                try {
+                    // Refresh order data to get latest info
+                    $updatedOrder = $this->orderModel->getOrderById($id);
+                    if ($updatedOrder) {
+                        require_once __DIR__ . '/../../Helpers/email_helpers.php';
+                        $emailService = getEmailService();
+                        $emailService->sendOrderStatusUpdate($updatedOrder, $currentStatus, $newStatus);
+                        error_log("Order status email sent for order #$id: $currentStatus -> $newStatus");
+                    }
+                } catch (Exception $e) {
+                    error_log("Failed to send order status email: " . $e->getMessage());
+                }
+            }
+            
             $statusText = match($newStatus) {
                 'accepted' => 'Đã chấp nhận',
                 'cancelled' => 'Đã hủy',
