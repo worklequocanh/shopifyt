@@ -78,6 +78,21 @@ class Order extends BaseModel
             // Create order details
             $this->createOrderDetails($orderId, $cart, $products);
 
+            // Deduct stock from inventory (NEW)
+            if (!class_exists('Product')) {
+                require_once __DIR__ . '/Product.php';
+            }
+            $productModel = new Product();
+            
+            foreach ($cart as $productId => $quantity) {
+                // Stock was already checked in calculateTotalAmount, but double-check for safety
+                if (!$productModel->checkStock($productId, $quantity)) {
+                    throw new Exception("Sản phẩm ID {$productId} không đủ hàng trong kho");
+                }
+                // Deduct stock
+                $productModel->decreaseStock($productId, $quantity);
+            }
+
             // Track voucher usage if applied
             if ($voucherId) {
                 $this->trackVoucherUsage($voucherId, $orderId, $accountId, $discountAmount);
@@ -280,6 +295,7 @@ class Order extends BaseModel
         }
 
         return [
+            'order_id' => $order['id'],
             'order_code' => '#' . str_pad($order['id'], 6, '0', STR_PAD_LEFT),
             'shipping_summary' => $order['customer_name'] . ', ' . $order['shipping_address']
         ];

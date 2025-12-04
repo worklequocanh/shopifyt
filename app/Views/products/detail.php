@@ -1,11 +1,41 @@
 <div class="container mx-auto px-4 py-8">
   <h1 class="text-3xl font-bold mb-8"><?php echo e($product['name']); ?></h1>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Product Images Section -->
     <div>
       <?php if (!empty($product['images'])): ?>
-        <img src="<?php echo e($product['images'][0]['image_url']); ?>" alt="<?php echo e($product['name']); ?>" class="w-full rounded-lg shadow-lg">
+        <!-- Main Image Display -->
+        <div class="mb-4 bg-white rounded-lg shadow-lg overflow-hidden">
+          <img id="mainProductImage" 
+               src="<?php echo e($product['images'][0]['image_url']); ?>" 
+               alt="<?php echo e($product['name']); ?>" 
+               class="w-full h-auto object-cover">
+        </div>
+        
+        <!-- Thumbnail Gallery (if multiple images) -->
+        <?php if (count($product['images']) > 1): ?>
+          <div class="grid grid-cols-4 gap-2">
+            <?php foreach ($product['images'] as $index => $image): ?>
+              <div class="cursor-pointer border-2 rounded-lg overflow-hidden hover:border-blue-500 transition <?php echo $index === 0 ? 'border-blue-500' : 'border-gray-200'; ?>"
+                   onclick="switchImage('<?php echo e($image['image_url']); ?>', this)">
+                <img src="<?php echo e($image['image_url']); ?>" 
+                     alt="<?php echo e($product['name']); ?> - <?php echo $index + 1; ?>" 
+                     class="w-full h-20 object-cover">
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      <?php else: ?>
+        <!-- Placeholder if no images -->
+        <div class="bg-gray-200 rounded-lg shadow-lg flex items-center justify-center h-96">
+          <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
       <?php endif; ?>
     </div>
+    
+    <!-- Product Info Section -->
     <div>
       <p class="text-2xl font-bold text-gray-900 mb-4"><?php echo format_currency($product['price']); ?></p>
       <p class="text-gray-600 mb-6"><?php echo e($product['description']); ?></p>
@@ -43,6 +73,19 @@
 </div>
 
 <script>
+// Switch main image when clicking thumbnail
+function switchImage(imageUrl, thumbnail) {
+  document.getElementById('mainProductImage').src = imageUrl;
+  
+  // Update active thumbnail border
+  document.querySelectorAll('.grid > div').forEach(div => {
+    div.classList.remove('border-blue-500');
+    div.classList.add('border-gray-200');
+  });
+  thumbnail.classList.remove('border-gray-200');
+  thumbnail.classList.add('border-blue-500');
+}
+
 function changeQty(delta) {
   const input = document.getElementById('quantity');
   const max = parseInt(input.max);
