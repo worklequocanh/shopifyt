@@ -23,22 +23,19 @@ class AdminProductController extends BaseController
     public function __construct()
     {
         parent::__construct();
-        
+
         // Require permission to manage products
         $this->requireAnyRole(['admin', 'employee']);
         $this->requirePermission(Permission::MANAGE_PRODUCTS);
-        
+
         // Load models
         require_once __DIR__ . '/../../Models/Product.php';
         require_once __DIR__ . '/../../Models/Category.php';
-        
+
         $this->productModel = new Product();
         $this->categoryModel = new Category();
     }
 
-    /**
-     * Product list
-     */
     /**
      * Product list
      */
@@ -48,7 +45,7 @@ class AdminProductController extends BaseController
         $categoryId = $this->get('category');
         $categoryId = ($categoryId !== '' && $categoryId !== null) ? (int)$categoryId : null;
         $search = $this->get('search', '');
-        
+
         // Status: 1=Active, 0=Hidden, null=All
         $status = $this->get('status');
         if ($status === 'all') {
@@ -95,7 +92,7 @@ class AdminProductController extends BaseController
         }
 
         $categories = $this->categoryModel->getAll();
-        
+
         $this->view('admin/products/create', [
             'page_title' => 'Thêm sản phẩm mới',
             'categories' => $categories,
@@ -130,7 +127,7 @@ class AdminProductController extends BaseController
             INSERT INTO products (name, description, price, stock, category_id, is_active, is_featured, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
-        
+
         if ($stmt->execute([
             $data['name'],
             $data['description'],
@@ -141,10 +138,10 @@ class AdminProductController extends BaseController
             $data['is_featured']
         ])) {
             $productId = $this->pdo->lastInsertId();
-            
+
             // Handle image upload
             $this->handleImageUpload($productId);
-            
+
             setFlashMessage('success', 'Thêm sản phẩm thành công!');
             $this->redirect('/admin/products');
         } else {
@@ -159,7 +156,7 @@ class AdminProductController extends BaseController
     public function edit($id)
     {
         $product = $this->productModel->find($id);
-        
+
         if (!$product) {
             setFlashMessage('error', 'Sản phẩm không tồn tại.');
             $this->redirect('/admin/products');
@@ -172,7 +169,7 @@ class AdminProductController extends BaseController
 
         $categories = $this->categoryModel->getAll();
         $images = $this->productModel->getProductImages($id);
-        
+
         $this->view('admin/products/edit', [
             'page_title' => 'Chỉnh sửa sản phẩm',
             'product' => $product,
@@ -211,7 +208,7 @@ class AdminProductController extends BaseController
                 category_id = ?, is_active = ?, is_featured = ?, updated_at = NOW()
             WHERE id = ?
         ");
-        
+
         if ($stmt->execute([
             $data['name'],
             $data['description'],
@@ -224,7 +221,7 @@ class AdminProductController extends BaseController
         ])) {
             // Handle image upload
             $this->handleImageUpload($id);
-            
+
             setFlashMessage('success', 'Cập nhật sản phẩm thành công!');
             $this->redirect('/admin/products');
         } else {
@@ -241,9 +238,9 @@ class AdminProductController extends BaseController
         // Only admin can delete
         $this->requireRole('admin');
         $this->requirePermission(Permission::DELETE_PRODUCTS);
-        
+
         $product = $this->productModel->find($id);
-        
+
         if (!$product) {
             $this->json(['success' => false, 'message' => 'Sản phẩm không tồn tại'], 404);
             return;
@@ -252,7 +249,7 @@ class AdminProductController extends BaseController
         // Soft delete - just mark as inactive
         // $stmt = $this->pdo->prepare("UPDATE products SET is_active = 0 WHERE id = ?");
         $stmt = $this->pdo->prepare("DELETE FROM products WHERE id = ?");
-        
+
         if ($stmt->execute([$id])) {
             $this->json(['success' => true, 'message' => 'Xóa sản phẩm thành công']);
         } else {
@@ -266,7 +263,7 @@ class AdminProductController extends BaseController
     public function toggleStatus($id)
     {
         $product = $this->productModel->find($id);
-        
+
         if (!$product) {
             $this->json(['success' => false, 'message' => 'Sản phẩm không tồn tại'], 404);
             return;
@@ -274,7 +271,7 @@ class AdminProductController extends BaseController
 
         $newStatus = $product['is_active'] ? 0 : 1;
         $stmt = $this->pdo->prepare("UPDATE products SET is_active = ? WHERE id = ?");
-        
+
         if ($stmt->execute([$newStatus, $id])) {
             $this->json(['success' => true, 'message' => 'Cập nhật trạng thái thành công', 'new_status' => $newStatus]);
         } else {
@@ -319,7 +316,7 @@ class AdminProductController extends BaseController
 
                 if (move_uploaded_file($files['tmp_name'][$i], $targetPath)) {
                     $imageUrl = '/assets/images/products/' . $fileName;
-                    
+
                     // Determine if this should be main image
                     $setMain = false;
                     if (!$hasMain && $i == 0) {
@@ -330,7 +327,7 @@ class AdminProductController extends BaseController
                         // but keeping basic logic here.
                         // For now, if no main image exists, first one becomes main.
                     }
-                    
+
                     // Insert image
                     $stmt = $this->pdo->prepare("
                         INSERT INTO product_images (product_id, image_url, is_main, created_at)
@@ -376,7 +373,7 @@ class AdminProductController extends BaseController
                 $nextImage = $stmt->fetch();
                 if ($nextImage) {
                     $this->pdo->prepare("UPDATE product_images SET is_main = 1 WHERE id = ?")
-                              ->execute([$nextImage['id']]);
+                        ->execute([$nextImage['id']]);
                     $newMainId = $nextImage['id'];
                 }
             }
@@ -410,11 +407,11 @@ class AdminProductController extends BaseController
 
             // Reset all to 0
             $this->pdo->prepare("UPDATE product_images SET is_main = 0 WHERE product_id = ?")
-                      ->execute([$productId]);
+                ->execute([$productId]);
 
             // Set selected to 1
             $this->pdo->prepare("UPDATE product_images SET is_main = 1 WHERE id = ?")
-                      ->execute([$imageId]);
+                ->execute([$imageId]);
 
             $this->pdo->commit();
             $this->json(['success' => true]);

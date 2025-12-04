@@ -26,13 +26,13 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: myapp
+      MYSQL_DATABASE: shopifyt
       MYSQL_USER: myuser
       MYSQL_PASSWORD: mypassword
     ports:
       - "3306:3306"
     volumes:
-      - ./mysql:/docker-entrypoint-initdb.d
+      - ./docker/mysql:/docker-entrypoint-initdb.d
       - mysql_data:/var/lib/mysql
     networks:
       - app-network
